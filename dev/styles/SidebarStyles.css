@@ -1,0 +1,637 @@
+/* =============================
+=        Sidebar Main         
+============================= */
+#custom-sidebar {
+	background: #111;
+	color: white;
+	display: flex;
+	flex-direction: column;
+	position: relative;
+	width: 300px;
+	transition: width 0.4s ease;
+	overflow: auto;
+	border-right: 2px solid #333;
+	padding-bottom: 1%;
+}
+
+/* =============================
+=       Sidebar Topbar        
+============================= */
+#sidebar-topbar {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 4px 4px;
+	background: #222;
+	border-bottom: 1px solid #444;
+}
+
+#sidebar-nav {
+	display: flex;
+	gap: 6px;
+}
+
+.sidebar-nav-btn {
+	background: rgba(255,255,255,0.05);
+	border: 1px solid #555;
+	color: white;
+	padding: 2px 4px;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background 0.2s ease;
+}
+
+.sidebar-nav-btn:hover {
+	background: rgba(255,255,255,0.15);
+}
+
+#sidebar-toggle {
+	background: rgba(255,255,255,0.05);
+	border: 1px solid #555;
+	cursor: pointer;
+	color: white;
+	padding: 4px;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	min-width: 36px;
+	min-height: 36px;
+}
+
+#sidebar-arrow {
+	pointer-events: none;
+}
+
+/* =============================
+=      Sidebar Top Info       
+============================= */
+#sidebar-top-info {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 8px;
+  gap: 4px;
+  background: #181818;
+  border-bottom: 1px solid #333;
+  font-size: 0.8em;
+}
+
+#sidebar-top-line1,
+#sidebar-top-line2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  padding-top: 2px;
+
+}
+
+#sidebar-gold,
+#sidebar-weather {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Dot separator styling */
+.dot-separator {
+  margin: 0 4px;
+  color: #666;
+}
+
+/* Smaller icons */
+#sidebar-gold i,
+#sidebar-weather-icon {
+  font-size: 16px;
+}
+
+
+/* =============================
+=       Sidebar Buttons       
+============================= */
+#custom-sidebar-buttons {
+	margin-top: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 8px;
+	border-bottom: 1px solid #555;
+}
+
+.button-single,
+.button-pair {
+	display: flex;
+	gap: 6px;
+}
+
+#btn-saves {
+	flex: 1;
+	background: rgba(255, 255, 255, 0.05);
+	color: white;
+	border: 1px solid #888;
+	padding: 6px 10px;
+	border-radius: 4px;
+	font-family: 'Cinzel', serif;
+	font-size: 0.85em;
+	font-weight: 700;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	text-shadow: 0 0 2px #000;
+	transition: background 0.2s, transform 0.2s;
+}
+
+#btn-saves:hover {
+	background: rgba(255, 255, 255, 0.15);
+	transform: scale(1.03);
+}
+
+#btn-saves svg {
+	width: 16px;
+	height: 16px;
+	stroke: white;
+}
+
+#ui-dialog {
+	z-index: 100100; /* High enough to appear above other panels */
+}
+
+.sidebar-btn {
+	flex: 1;
+	background: rgba(255,255,255,0.05);
+	color: white;
+	border: 1px solid #888;
+	padding: 4px 10px;
+	border-radius: 4px;
+	font-family: 'Cinzel', serif;
+	font-size: 0.75em;
+	font-weight: 700;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	text-shadow: 0 0 2px #000;
+	transition: background 0.2s, transform 0.2s;
+}
+
+.macro-button {
+	flex: 1;
+	background: rgba(255,255,255,0.05);
+	color: white;
+	border: 1px solid #888;
+	padding: 4px 10px;
+	border-radius: 4px;
+	font-family: 'Cinzel', serif;
+	font-size: 0.75em;
+	font-weight: 700;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	text-shadow: 0 0 2px #000;
+	transition: background 0.2s, transform 0.2s;
+
+}
+
+.macro-button svg {
+	width: 16px;
+	height: 15px;
+}
+
+.sidebar-btn:hover {
+	background: rgba(255,255,255,0.15);
+	transform: scale(1.03);
+}
+
+.sidebar-btn svg {
+	width: 16px;
+	height: 16px;
+	stroke: white;
+}
+
+/* =============================
+=         Status Bars         
+============================= */
+.status-bar {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	background: rgba(255,255,255,0.05);
+	border: 1px solid #666;
+	border-radius: 4px;
+	height: 14px;
+	padding: 2px 6px;
+	margin: 6px 10px;
+	position: relative;
+	overflow: hidden;
+	font-size: 0.8em;
+}
+
+/* Icon styling */
+.status-bar i,
+.status-bar svg {
+	width: 18px;
+	height: 18px;
+	min-width: 18px;
+	min-height: 18px;
+	stroke: white;
+	pointer-events: none;
+}
+
+/* Label styling */
+.status-bar span {
+	position: relative;
+	z-index: 2; /* Ensure it's above the fill */
+	white-space: nowrap;
+	color: white;
+	text-shadow: 0 0 3px rgba(0, 0, 0, 0.8); /* Adds contrast glow */
+	cursor: default;
+	padding-top: 2px
+}
+
+
+/* NEW: Fill wrapper for width control */
+.status-bar-fill-wrapper {
+	position: absolute;
+	left: 25px; /* Adjust based on icon + label + spacing */
+	right: 6px;
+	top: 50%;
+	height: 70%;
+	transform: translateY(-50%);
+	pointer-events: none;
+	z-index: 0;
+}
+
+/* Fill bar itself (set width dynamically in JS) */
+.status-bar-fill {
+	width: 0%;
+	height: 100%;
+	border-radius: 2px;
+	transition: width 0.4s ease, background 0.3s ease;
+}
+/* Health: forest green to neon green */
+#health-fill {
+	background: linear-gradient(90deg, #375d38, #0b8110);
+}
+
+/* Fatigue: sky blue to midnight blue */
+#fatigue-fill {
+	background: linear-gradient(90deg, #001b40, #a2e9ff );
+}
+
+/* Composure: electric yellow to golden amber */
+#composure-fill {
+	background: linear-gradient(90deg,#c0a800, #fff77a );
+}
+
+/* Excitement: magenta pink to deep purple */
+#excitement-fill {
+	background: linear-gradient(90deg, #ff4fd8, #3b0063);
+}
+
+.bar-value {
+	position: absolute;
+	transform: translateY(-50%);
+	color: #d6ffb9;
+	font-weight: 700;
+	font-size: 0.75em;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+	pointer-events: none;
+	text-shadow: 0 0 2px #000;
+	top: 20%
+}
+.status-bar:hover .bar-value {
+	opacity: 1;
+}
+#health-value {
+
+	left: 150px;
+}
+
+#fatigue-value {
+	left: 150px;
+}
+
+#composure-value {
+	left: 120px;
+}
+
+#excitement-value {
+	left: 120px;
+}
+
+/* =============================
+=      Level and Exp Bars     
+============================= */
+#sidebar-level-exp {
+	padding: 8px 10px;
+	font-size: 0.85em;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.exp-bar {
+	background: rgba(255,255,255,0.05);
+	border: 1px solid #555;
+	height: 10px;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.exp-bar-fill {
+	background: #42a5f5;
+	height: 100%;
+	width: 0%;
+	transition: width 0.4s ease;
+}
+
+/* =============================
+=        Summary View         
+============================= */
+
+#sidebar-summary {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 6px;
+	padding: 6px 4px;
+	background: #181818;
+	border-bottom: 1px solid #333;
+	font-size: 0.65em;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+/* Top Line Items */
+#summary-time,
+#summary-gold,
+#summary-level,
+#summary-date {
+	font-size: 1em;
+	text-align: center;
+	word-break: break-word;
+	line-height: 1.3;
+}
+
+/* Mini container for time, date, weather, etc. */
+#summary-top {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	width: 100%;
+}
+
+/* Compact vertical layout for 4 stat icons */
+#summary-status-icons {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+}
+
+/* Icon wrap container */
+.summary-icon-wrap {
+	position: relative;
+	width: 32px;
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Lucide icons inside summary view */
+.summary-icon-wrap i {
+	position: relative;
+	z-index: 2;
+	width: 18px;
+	height: 18px;
+	stroke-width: 2;
+	color: white;
+	transition: filter 0.3s ease;
+	pointer-events: none;
+}
+
+/* Fill bar that grows behind each icon */
+.summary-fill {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	height: 0%;
+	z-index: 1;
+	border-radius: 4px;
+	opacity: 0.5;
+	transition: height 0.3s ease;
+}
+
+/* Stat-specific gradients (fills animate by JS) */
+#summary-health-fill {
+	background: linear-gradient(to top, #4caf50, #0b8110);
+}
+#summary-fatigue-fill {
+	background: linear-gradient(to top, #a2e9ff, #001b40);
+}
+#summary-composure-fill {
+	background: linear-gradient(to top, #fff77a, #c0a800);
+}
+#summary-excitement-fill {
+	background: linear-gradient(to top, #ff4fd8, #3b0063);
+}
+
+/* Optional glow classes applied by JS */
+#summary-status-icons i.low {
+	filter: drop-shadow(0 0 2px #f44336cc);
+}
+#summary-status-icons i.mid {
+	filter: drop-shadow(0 0 2px #ffc107cc);
+}
+#summary-status-icons i.high {
+	filter: drop-shadow(0 0 3px #4caf50cc);
+}
+
+/* Level + mini-XP display block */
+#summary-level-exp {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	width: 80%;
+}
+
+/* XP progress bar styling */
+.exp-bar-mini {
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid #555;
+	height: 6px;
+	width: 100%;
+	border-radius: 3px;
+	overflow: hidden;
+}
+
+.exp-bar-fill-mini {
+	background: #42a5f5;
+	height: 100%;
+	width: 0%;
+	transition: width 0.4s ease;
+}
+
+/* Status effect icons (e.g. poisoned) */
+#summary-conditions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	gap: 4px;
+	width: 100%;
+}
+
+/* =============================
+=     Collapsed Sidebar       
+============================= */
+#custom-sidebar.collapsed {
+	width: 50px;
+}
+
+/* Hide navigation arrows */
+#custom-sidebar.collapsed #sidebar-nav {
+	display: none;
+}
+
+/* Hide menu buttons (Character, Inventory, etc.) */
+#custom-sidebar.collapsed #custom-sidebar-buttons {
+	display: none !important;
+}
+
+/* Shrink status bars text */
+#custom-sidebar.collapsed .status-bar span {
+	display: none;
+}
+
+/* Shrink status bar fill left-right space */
+#custom-sidebar.collapsed .status-bar-fill {
+	left: 30px;
+	right: 4px;
+}
+
+/* Sidebar toggle (arrow button) stays clickable */
+#sidebar-toggle {
+	background: rgba(255,255,255,0.05);
+	border: 1px solid #555;
+	cursor: pointer;
+	color: white;
+	padding: 4px;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+}
+
+/* Sidebar arrow not separately clickable */
+#sidebar-arrow {
+	pointer-events: none;
+}
+
+/* =============================
+=    Disabled Nav Buttons     
+============================= */
+.sidebar-nav-btn:disabled {
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid #333;
+	color: #888;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+.sidebar-nav-btn:disabled i {
+	stroke: #888;
+}
+
+/* =============================
+=     Glow Effects Critical    
+============================= */
+.critical-status {
+	animation: glowPulse 1.5s infinite alternate;
+}
+
+@keyframes glowPulse {
+	from { filter: drop-shadow(0 0 5px #f44336); }
+	to { filter: drop-shadow(0 0 15px #f44336); }
+}
+
+/* Collapsed Sidebar - Bug Report Icon */
+#summary-bug-report {
+  margin-top: auto; /* Pushes it to the bottom if using flex-column */
+  padding-bottom: 0.5rem;
+}
+
+#summary-bug-report .sidebar-icon-only {
+  background: none;
+  border: none;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 1.2em;
+  padding: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+#summary-bug-report .sidebar-icon-only:hover {
+  color: #fff;
+  transform: scale(1.1);
+}
+
+/* Expanded Sidebar - Bug Report Button */
+#bug-report-button {
+  position: absolute;
+  z-index: 10; /* Make sure it's on top of most layers */
+}
+
+#bug-report-button .sidebar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #3a3a3a;
+  color: #ddd;
+  padding: 1.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+#bug-report-button .sidebar-btn:hover {
+  background-color: #505050;
+  transform: translateY(-2px);
+}
+
+#sidebar-support-links {
+	display: flex;
+	justify-content: center;
+	gap: 12px;
+	margin: 12px 0 0;
+	padding-bottom: 12px;
+}
+
+.sidebar-support-icon {
+	width: 24px;
+	height: 24px;
+	opacity: 0.75;
+	transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar-support-icon:hover {
+	opacity: 1;
+	transform: scale(1.1);
+}

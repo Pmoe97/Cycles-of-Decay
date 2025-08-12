@@ -1,0 +1,234 @@
+:: SidebarUI [nobr]
+
+<!-- Top Nav and Collapse -->
+<div id="sidebar-topbar">
+	<div id="sidebar-nav">
+		<button id="sidebar-nav-back" class="sidebar-nav-btn" title="Go back">
+			<i data-lucide="undo-2"></i>
+		</button>
+		<button id="sidebar-nav-forward" class="sidebar-nav-btn" title="Go forward">
+			<i data-lucide="redo-2"></i>
+		</button>
+	</div>
+	<button id="sidebar-toggle" type="button" class="sidebar-btn">
+		<i id="sidebar-arrow" data-lucide="arrow-left"></i>
+	</button>
+</div>
+
+
+<!-- Collapsed Summary -->
+<div id="sidebar-summary" style="display: none; flex-direction: column; align-items: center; gap: 8px;">
+	<span id="summary-time">--:--</span>
+	<span id="summary-date">Loading Date...</span>
+	<div id="summary-location-weather" style="display: flex; flex-direction: column; align-items: center;">
+		<i id="sidebar-weather-icon" data-lucide="sun" title="Clear Skies"></i>
+		<span id="summary-location">Unknown</span>
+	</div>
+	<span id="summary-gold">0</span>
+	<div id="summary-status-icons">
+		<div class="summary-icon-wrap" id="summary-health-wrap">
+			<div class="summary-fill" id="summary-health-fill"></div>
+			<i id="summary-health" data-lucide="heart"></i>
+		</div>
+		<div class="summary-icon-wrap" id="summary-fatigue-wrap">
+			<div class="summary-fill" id="summary-fatigue-fill"></div>
+			<i id="summary-fatigue" data-lucide="zap"></i>
+		</div>
+		<div class="summary-icon-wrap" id="summary-composure-wrap">
+			<div class="summary-fill" id="summary-composure-fill"></div>
+			<i id="summary-composure" data-lucide="brain"></i>
+		</div>
+		<div class="summary-icon-wrap" id="summary-excitement-wrap">
+			<div class="summary-fill" id="summary-excitement-fill"></div>
+			<i id="summary-excitement" data-lucide="flame"></i>
+		</div>
+	</div>
+	<div id="summary-level-exp" style="display: flex; flex-direction: column; align-items: center;">
+		<span id="summary-level">Lvl 1</span>
+		<div class="exp-bar-mini">
+			<div class="exp-bar-fill-mini" id="exp-fill-mini"></div>
+		</div>
+	</div>
+	<div id="summary-conditions"></div>
+	<div id="summary-bug-report">
+		<button class="sidebar-icon-only" onclick="openOverlay('bug-report-page')" title="Report Bug">
+		<i data-lucide="bug-play"></i>
+		</button>
+	</div>
+</div>
+
+<!-- Main Scrollable Content -->
+<div id="sidebar-content">
+	<div id="sidebar-top-info">
+		<div id="sidebar-top-line1">
+			<span id="sidebar-time">6:00</span>
+			<span class="dot-separator">•</span>
+			<span id="sidebar-date">1 Rain, 12219 AI</span>
+			<span class="dot-separator">•</span>
+			<span id="sidebar-location">Unknown Location</span>
+		</div>
+		<div id="sidebar-top-line2">
+			<span id="sidebar-gold">
+				<i data-lucide="coins"></i>
+				<span id="sidebar-gold-amount">100</span>g
+			</span>
+		<span class="dot-separator">•</span>
+		<span id="sidebar-weather">
+			<i id="sidebar-weather-icon" data-lucide="sun" title="Clear Skies"></i>
+		</span>
+	</div>
+</div>
+
+	<div id="sidebar-status-tracker">
+		<div class="status-bar" id="health-bar">
+			<i data-lucide="heart"></i>
+			<span>Health</span>
+			<div class="status-bar-fill-wrapper">
+				<div class="status-bar-fill" id="health-fill"></div>
+			</div>
+			<span class="bar-value" id="health-value"></span>
+		</div>
+		<div class="status-bar" id="fatigue-bar">
+			<i data-lucide="zap"></i>
+			<span>Fatigue</span>
+			<div class="status-bar-fill-wrapper">
+				<div class="status-bar-fill" id="fatigue-fill"></div>
+			</div>
+			<span class="bar-value" id="fatigue-value"></span>
+		</div>
+		<div class="status-bar" id="composure-bar">
+			<i data-lucide="brain"></i>
+			<span>Composure</span>
+			<div class="status-bar-fill-wrapper">
+				<div class="status-bar-fill" id="composure-fill"></div>
+			</div>
+			<span class="bar-value" id="composure-value"></span>
+		</div>
+		<div class="status-bar" id="excitement-bar">
+			<i data-lucide="flame"></i>
+			<span>Excitement</span>
+			<div class="status-bar-fill-wrapper">
+				<div class="status-bar-fill" id="excitement-fill"></div>
+			</div>
+			<span class="bar-value" id="excitement-value"></span>
+		</div>
+		<div id="conditional-status-bars"></div>
+	</div>
+
+	<div id="sidebar-carryweight" style="display:none;">
+		<i data-lucide="package"></i> <span id="carryweight-text">Carryweight: 0/100</span>
+		<div class="status-bar-carry">
+			<div class="carry-bar-fill" id="carry-fill"></div>
+		</div>
+	</div>
+
+	<div id="sidebar-level-exp">
+		<span id="sidebar-level">Lvl 1</span>
+		<div class="exp-bar">
+			<div class="exp-bar-fill" id="exp-fill"></div>
+		</div>
+		<span id="exp-text">0/100 XP</span>
+	</div>
+
+	<!-- Minimap Section -->
+	<div id="sidebar-minimap-container">
+		<div class="minimap-header">
+			<i data-lucide="map"></i>
+			<span>Local Map</span>
+			<button id="minimap-fullscreen-btn" class="minimap-control-btn" title="View Full Map">
+				<i data-lucide="maximize-2"></i>
+			</button>
+		</div>
+		<div id="tile-map-container" class="minimap-display"></div>
+		<div class="minimap-info">
+			<div class="minimap-location">
+				<span id="minimap-current-map">Loading...</span>
+			</div>
+			<div class="minimap-position">
+				Pos: <span id="minimap-player-coords">(0, 0)</span>
+			</div>
+		</div>
+	</div>
+
+	<div id="custom-sidebar-buttons">
+		<div class="button-single">
+			<button class="sidebar-btn" onclick="openOverlay('character-sheet')">
+				<i data-lucide="scroll-text"></i> Character
+			</button>
+		</div>
+		<div class="button-single">
+			<button class="sidebar-btn" onclick="openOverlay('inventory-page')">
+				<i data-lucide="backpack"></i> Inventory
+			</button>
+		</div>
+		<div class="button-pair">
+			<button class="sidebar-btn" onclick="openOverlay('journal-page')">
+				<i data-lucide="book-open"></i> Journal
+			</button>
+			<button class="sidebar-btn" onclick="openOverlay('people-page')">
+				<i data-lucide="users"></i> People
+			</button>
+		</div>
+		<div class="button-pair">
+			<button class="sidebar-btn" onclick="openOverlay('stats-page')">
+				<i data-lucide="brain"></i> Stats
+			</button>
+			<button class="sidebar-btn" onclick="openOverlay('achievements-page')">
+				<i data-lucide="star"></i> Achievements
+			</button>
+		</div>
+		<div class="button-pair">
+			<<button '<i data-lucide="save"></i> Saves'>>
+				<<run UI.saves()>>
+			<</button>>
+			<button class="sidebar-btn" id="sidebar-options">
+                <i data-lucide="settings"></i> Options
+            </button>
+		</div>	
+	</div>
+	<div id="sidebar-support-links">
+		<a href="https://pmoe-97.itch.io/liff-origins-jaylie" target="_blank" title="Visit on Itch.io">
+			<img src="images/itch-icon.png" alt="Itch.io" class="sidebar-support-icon">
+		</a>
+		<a href="https://patreon.com/Pmoe" target="_blank" title="Support on Patreon">
+			<img src="images/patreon-icon.png" alt="Patreon" class="sidebar-support-icon">
+		</a>
+	</div>
+
+	<div id="bug-report-button">
+		<button class="sidebar-btn" onclick="openOverlay('bug-report-page')">
+			<i data-lucide="bug-play"></i> Report Bug
+		</button>
+	</div>
+</div>
+
+<<script>>
+const s = State.variables.player.status;
+
+function updateBar(id, current, max) {
+	const fill = document.getElementById(id + "-fill");
+	const value = document.getElementById(id + "-value");
+	if (fill) fill.style.width = ((current / max) * 100) + "%";
+	if (value) value.textContent = Math.round(current) + " / " + Math.round(max);
+}
+
+updateBar("health", s.health, s.maxHealth);
+updateBar("fatigue", s.fatigue, s.maxFatigue);
+updateBar("composure", s.composure, s.maxComposure);
+updateBar("excitement", s.excitement, s.maxExcitement);
+
+if (typeof setup?.SidebarUI?.initialize === "function") {
+	setup.SidebarUI.initialize();
+}
+
+(function waitForLucide(retries = 20) {
+	if (window.lucide && typeof lucide.createIcons === "function") {
+		console.log("[SidebarUI] Lucide is ready — rendering icons!");
+		lucide.createIcons();
+	} else if (retries > 0) {
+		setTimeout(() => waitForLucide(retries - 1), 100);
+	} else {
+		console.warn("[SidebarUI] Lucide failed to initialize after timeout.");
+	}
+})();
+<</script>>

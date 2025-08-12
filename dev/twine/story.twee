@@ -1,0 +1,76 @@
+:: StoryTitle
+Cycles of Decay
+
+:: StoryData
+{
+	"ifid": "e72e94c5-ed7f-46e7-9f09-5eb474ec4090",
+	"format": "SugarCube",
+	"format-version": "2.37.3",
+	"start": "Start",
+	"tagColors": {}
+}
+
+:: StorySettings
+{"debug": true}
+
+:: StoryCaption
+<i>Cycles of Decay</i> — A Twine/SugarCube interactive fiction project scaffold.
+
+:: StoryAuthor
+Your Name Here
+
+:: StorySubtitle
+A World In Slow Collapse
+
+:: StoryBanner
+<img src="assets/images/banner.png" alt="Cycles of Decay" />
+
+:: StoryStylesheet[stylesheet]
+/* Inline stylesheet (optional). Core styles live in dev/styles/*.css */
+/* Example variable overrides */
+:root {
+	--cod-accent: #8fd1ff;
+}
+
+:: StoryScript[script]
+/* Inline JavaScript (optional). Core scripts live in dev/js/*.js */
+/* Example: simple version log */
+console.log('StoryScript loaded: Cycles of Decay');
+
+:: StoryInit
+/* Runs once at story start (after StoryScript). */
+setup.game = {
+	title: 'Cycles of Decay',
+	version: '0.0.1',
+	initialized: true
+};
+/* Initialize new procedural world if required */
+if (State.variables._needsInit || !State.variables.legacy) {
+	setup.initNewGame();
+}
+
+/* Convenience reference */
+State.variables.player = State.variables.pc; // legacy code compatibility
+
+:: StoryMenu
+/* Customize the menu (appears via the sidebar). */
+<<link 'Restart'>><<restart>><</link>> | <<link 'Save'>><<save>><</link>> | <<link 'Load'>><<load>><</link>>
+
+:: Start
+<<if !_once.startBanner>>
+<div class="seed-note">World Seed: <span title="Use the ?seed= query parameter to reproduce a world">$legacy.seed</span></div>
+<</if>>
+You stand amidst ruins, the wind carrying whispers of forgotten cycles.
+
+Current Life: <b>$pc.name</b> (<i>$pc.archetype</i>) — Traits: $pc.traits.join(', ')
+<br/>Health: $pc.health / $pc.stats.maxHealth | Awareness: $pc.stats.awareness | Will: $pc.stats.will
+<br/>Population: $legacy.populationRoster.length remaining.
+
+[[Continue|Intro]]
+
+<<link "Start Fresh World" >><<newgame>><</link>> (procedurally regenerate all inhabitants)
+
+:: Intro
+This is a placeholder passage. Add your narrative here.
+
+[[Back to Start|Start]]

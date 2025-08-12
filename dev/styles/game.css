@@ -1,0 +1,31 @@
+/* Core styles for Cycles of Decay */
+body {
+	background: #0b0d0f;
+	color: #e2e8f0;
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	line-height: 1.5;
+	margin: 0;
+}
+
+#story {
+	max-width: 860px;
+	margin: 2rem auto 4rem;
+	padding: 0 1.25rem;
+}
+
+.passage {
+	animation: fade 300ms ease;
+}
+
+@keyframes fade {
+	from { opacity: 0; transform: translateY(4px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+.link-internal, .link-external {
+	color: #8fd1ff;
+	text-decoration: none;
+}
+.link-internal:hover, .link-external:hover {
+	text-decoration: underline;
+}
