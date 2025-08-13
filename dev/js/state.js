@@ -148,11 +148,23 @@
 			entropy: 0,
 			day: 0
 		};
-		const populationSize = 12; // configurable baseline
-		v.legacy.populationRoster = setup.generatePopulation(populationSize);
-		// Assign current player character as first in roster for now
-		v.pc = Object.assign({}, v.legacy.populationRoster[0], {isPlayer:true});
-		v._genInfo = { populationSize: populationSize };
+		// Use new rich NPC system if available
+		const populationSize = 20; // TODO: surface user setting or difficulty scaling
+		if (setup.NPC && setup.NPC.generatePopulation) {
+			v.legacy.populationRoster = setup.NPC.generatePopulation(populationSize);
+		} else {
+			console.warn('[initNewGame] Rich NPC module missing; falling back to basic generation');
+			v.legacy.populationRoster = [];
+		}
+		// First playable character: copy first roster entry (retain reference clone to avoid mutating roster directly during play)
+		if (v.legacy.populationRoster.length) {
+			v.pc = Object.assign({}, v.legacy.populationRoster[0], { isPlayer:true });
+			v.player = v.pc; // alias for UI code expecting player
+		} else {
+			v.pc = { id:'PC_Fallback', name:'Fallback', isPlayer:true };
+			v.player = v.pc;
+		}
+		v._genInfo = { populationSize: populationSize, schema: setup.NPC?.SCHEMA_VERSION };
 	};
 
 	/* ================= Macro: newgame ================= */

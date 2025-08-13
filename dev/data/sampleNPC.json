@@ -1,0 +1,224 @@
+/* This is a sample NPC JSON file for the Cycles of Decay game.
+   It contains various attributes and properties that define the NPC's identity, background, personality, and more.
+   This file is used as an example for NPC creation. It contains comments to explain fields and structure. Obviously, this does not work for actual game data, but again... this is just a template.
+*/
+
+{
+  "id": "str",                      /* stable unique ID: e.g., "NPC_1" */
+  "version": 1,                     /* schema versioning for migrations */
+
+  "lifecycle": {
+    "isAlive": true,
+    "isEntropyAfflicted": true,    /* Currently afflicted by Entropy disease */
+    "isPlayableHost": true,         /* can the player reincarnate into them? */
+    "isDiscovered": false,          /* met/seen in the world yet */
+    "death": {                      /* filled when this character dies */
+      "cause": null,                /* e.g., "bleed_out", "structure_radiance" */
+      "time": null,
+      "locationId": null
+    },
+    "hostHistory": {                /* tracks player-possessions of this body */
+      "wasPlayer": false,
+      "incarnations": []            /* array of run IDs/time stamps */
+    }
+  },
+
+  "identity": {
+    "fullName": "str",
+    "alias": "str|null",
+    "age": 31,
+    "pronouns": "she/her",
+    "genderIdentity": "female",     /* free text or enum */
+    "species": "human",
+    "height_cm": 170,
+    "build": "average",
+    "appearance": {
+      "hair": "brown, shoulder-length",
+      "eyes": "hazel",
+      "skin": "medium",
+      "distinguishingMarks": ["scar on left brow"]
+    },
+    "portrait": {                   /* for later image hooks */
+      "seed": null,
+      "style": "painterly"
+    }
+  },
+
+  "background": {
+    "originWard": "Lower_Riverside_District",    /*what part of the city they are from*/
+    "occupation": "paramedic",
+    "factions": ["FAC_TownClinic"],
+    "biography": "short diegetic blurb",
+    "secrets": [
+      { "id": "sec_owes_shady_dealer", "visibility": "self", "weight": 0.6 }
+    ],
+    "reputation": {                 /* faction & global rep */
+      "global": 0,                  /* -100..+100 */
+      "byFaction": { "FAC_TownClinic": 35 }
+    }
+  },
+
+  "personality": {
+    "archetype": "caretaker",       /* used for dialogue tones */
+    "traits": ["empathetic", "methodical", "risk-averse"],  /* light-weight tags */
+    "big5": {
+        "O": 0.54,  // Openness to Experience
+        "C": 0.71,  // Conscientiousness
+        "E": 0.38,  // Extraversion
+        "A": 0.82,  // Agreeableness
+        "N": 0.44   // Neuroticism
+    },
+
+    "motivations": [
+      { "id": "protect_town", "intensity": 0.75 },
+      { "id": "avoid_confrontation", "intensity": 0.5 }
+    ],
+    "fears": ["abandonment", "deep_water"]
+  },
+
+    "attributes": {                      /* core ability scores (0–10 baseline) */
+    "STR": 4,                          /* Strength        */
+    "AGI": 5,                          /* Agility         */
+    "END": 6,                          /* Endurance       */
+    "FOR": 7,                          /* Fortitude (grit)*/
+    "CHA": 6,                          /* Charisma        */
+    "INT": 5,                          /* Intelligence    */
+    "WIS": 6,                          /* Wisdom (sense)  */
+    "mods": {                          /* temporary buffs/debuffs (sum at runtime) */
+        "STR": 0, "AGI": 0, "END": 0, "FOR": 0, "CHA": 0, "INT": 0, "WIS": 0
+    }
+    },
+
+    "derived": {                       /* computed from attributes; cache for UI */
+    "hpMax":  20,                      /* e.g., 10 + END*1.5 + FOR*1.5 (example) */
+    "staminaMax": 60,                  /* e.g., 30 + END*2 + AGI*2                */
+    "carryCap": 26,                    /* e.g., 10 + STR*4 + END*1                */
+    "moveSpeed": 5.2,                  /* tiles/turn from AGI and load             */
+    "initiative": 11,                  /* turn order from AGI+WIS                  */
+    "perception": 62,                  /* % spot checks from WIS (+INT minor)      */
+    "resistPain": 58,                  /* % from FOR (+END)                        */
+    "resistFear": 55,                  /* % from FOR (+WIS)                        */
+    "resistDisease": 44,               /* % from END (+WIS)                        */
+    "critChance": 0.05                 /* baseline crit                            */
+    },
+
+    "skills": {                          /* skills are not authored here */
+    "model": "derived",                /* computed via formulas (see setup) */
+    "cache": {                         /* optional: last computed values for UI */
+        "ts": null,                      /* ISO timestamp of last compute */
+        "values": {}                     /* e.g., { "firstAid": 62, "melee": 28, ... } */
+    }
+    },
+
+  "conditions": {                   /* health & ongoing modifiers */
+    "vitals": {
+      "hp": 10,
+      "bleeding": 0,                /* 0..100 || rate of active bleed from untreated wounds*/
+      "pain": 0,                    /* 0..100 */
+      "fatigue": 12,                /* 0..100 */
+      "stress": 18                  /* 0..100 */
+    },
+    "bodymap": {                    /* simple limb/organ state */
+      "head": { "status": "ok" },
+      "ears": { "status": "ok" },
+      "eyes": { "status": "ok" },
+      "neck": { "status": "ok" },
+      "torso": { "status": "ok" },
+      "genitals": { "status": "ok" },
+      "l_arm": { "status": "ok" },
+      "r_arm": { "status": "ok" },
+      "l_leg": { "status": "ok" },
+      "r_leg": { "status": "ok" },
+    },
+    "afflictions": [
+      {
+        "id": "sprained_ankle",
+        "location": "l_leg",
+        "onset": "2025-08-12T12:00Z",
+        "severity": 0.4,            /* 0..1 */
+        "tags": ["injury","mobility"],
+        "mods": { "AGI": -1, "athletics_pct": -0.15, "move_mult": 0.8 },
+        "treatment": ["rest","wrap","painkiller"]
+      }
+    ],
+    "prosthetics": [],              /* missing-limb support */
+    "immunities": []
+  },
+
+  "entropy": {                      /* Unique Game 'disease' that affects townspeople, taints knowledge and decision-making */
+    "exposure": 0.12,               /* 0..1 overall corruption */
+    "resistance": 0.22,             /* innate resilience vs entropy effects */
+    "resonances": [                 /* links to structures/obelisks */
+      { "structureId": "STR_AshSpire", "affinity": -0.3 }  /* neg = repelled */
+    ],
+    "fragmentsKnown": [             /* lore shards this person knows */
+      "FRAG_RadianceHurtsAtNoon"
+    ]
+  },
+
+  "inventory": {
+    "currency": { "credits": 34 },
+    "slots": {
+        "head": null,
+        "body": { "id": "itm_paramedic_vest", "durability": 0.9 },
+        "hands": { "id": "itm_work_gloves", "durability": 0.8 },
+        "back": null,
+        "legs": null,
+        "feet": null
+    },
+    "pack": [
+        { "id": "itm_bandage", "qty": 4 },
+        { "id": "itm_painkiller_tabs", "qty": 2 },
+        { "id": "itm_water_bottle", "qty": 1 },
+        { "id": "itm_energy_bar", "qty": 3 },
+        { "id": "itm_flashlight", "qty": 1, "durability": 0.8 }
+    ],
+    "equipped": {
+        "mainHand": { "id": "itm_rescue_shears", "durability": 0.95 },
+        "offHand": null
+    }
+  },
+
+
+  "relationships": {
+    "family": [ "NPC_8h2amf" ],
+    "romance": [],
+    "friends": [ "NPC_w3p19x" ],
+    "rivals": [],
+    "byId": {                       /* fine-grained opinion mapping */
+      "NPC_8h2amf": { "opinion": 65, "tags": ["sibling"] },
+      "NPC_w3p19x": { "opinion": 40, "tags": ["coworker"] }
+    }
+  },
+
+  "knowledge": {
+    "mapPins": ["LOC_Clinic","LOC_Riverside","LOC_AshSpire_Perimeter"],
+    "keys": ["KEY_ClinicMedCabinet"],
+    "rumors": [
+      { "id": "RUMOR_MissingNightShift", "confidence": 0.5 }
+    ]
+  },
+
+  "behavior": {
+    "schedule": [
+      { "days": "Mon-Fri", "start": "07:00", "end": "15:00", "at": "LOC_Clinic" },
+      { "days": "Mon-Fri", "start": "15:30", "end": "18:00", "at": "LOC_Grocery" },
+      { "days": "*", "start": "22:30", "end": "06:30", "at": "LOC_Apt_2B" }
+    ],
+    "combatTactics": "avoid_then_firstAid",
+    "dialogueStyle": ["soft-spoken","practical"]
+  },
+
+  "flags": {
+    "questGiverIds": ["QST_ParamedicSupplies"],
+    "barksSeen": [],
+    "metPlayer": false,
+    "plotCritical": false,          /* protect from random culling if needed */
+    "spawnLocked": false            /* for handcrafted seed NPCs */
+  },
+
+  "debug": {
+    "createdAt": "2025-08-12T12:00Z",
+    "seed": 4130282391              /* RNG seed that produced this NPC */
+  }
+}
