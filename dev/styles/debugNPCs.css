@@ -1,0 +1,47 @@
+/* Debug NPC list grid */
+.npc-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1.6fr 0.7fr 1.2fr 0.7fr 0.8fr;
+  gap: 6px 10px;
+  align-items: center;
+}
+.npc-grid .hdr {
+  font-weight: 700;
+  border-bottom: 1px solid var(--ui-border, #888);
+  padding-bottom: 4px;
+}
+.npc-row {
+  padding: 2px 0;
+  border-bottom: 1px dashed rgba(0,0,0,.08);
+}
+.npc-row:hover {
+  background: rgba(255,255,255,.04);
+}
+.npc-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.9em;
+  border: 1px solid rgba(255,255,255,.3);
+}
+.npc-pill.alive { background:#144; }
+.npc-pill.dead  { background:#411; }
+.npc-pill.entropy { background:#333; }
+
+.npc-toolbar {
+  display:flex; gap:10px; align-items:center; margin: 8px 0 12px;
+}
+.npc-search { width: 220px; }
+
+/* Inspector prettifier */
+.obj ul { list-style: none; padding-left: 1ch; margin: 2px 0; }
+.obj li { margin: 2px 0; }
+.obj .k { color: #9dc; }
+.obj .v-null { color: #aaa; }
+.obj .v-str { color: #c9f; word-break: break-word; }
+.obj .v-num { color: #fd8; }
+.obj .v-bool { color: #9f9; }
+.obj .v-arr { color: #9cf; }
+.obj details { border-left: 2px solid rgba(255,255,255,.1); margin-left: 4px; padding-left: 6px; }
+.obj summary { cursor: pointer; }
+textarea.jsonbox { width: 100%; min-height: 200px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }

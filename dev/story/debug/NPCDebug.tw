@@ -1,0 +1,96 @@
+:: NPC Debug
+<<set _ids = setup.npcIds()>>
+<<set _q = $npcDebugSearch or "">>
+<<set _page = $npcDebugPage or 1>>
+<<set _pageSize = 50>> <!-- tweak for 200+ -->
+
+<div class="npc-toolbar">
+  <input class="npc-search" type="text" placeholder="Search id / name / occupation" value="<<=_q>>"
+         oninput="State.variables.npcDebugSearch = this.value; Engine.play(passage())">
+  <span>Showing <<=_ids.length>> NPCs</span>
+  <<link "Clear search">><<unset $npcDebugSearch>><<run Engine.play(passage())>><</link>>
+</div>
+
+<<set _filtered = []>>
+<<for _i to 0; _i lt _ids.length; _i++>>
+  <<set _n = setup.getNPC(_ids[_i])>>
+  <<if _n and setup.filterNpc(_n, _q)>>
+    <<set _filtered.push(_n)>>
+  <</if>>
+<</for>>
+
+<<set _pages = Math.max(1, Math.ceil(_filtered.length / _pageSize))>>
+<<set _page = Math.min(_page, _pages)>>
+<<set _start = (_page - 1) * _pageSize>>
+<<set _slice = _filtered.slice(_start, _start + _pageSize)>>
+
+<div class="npc-grid">
+  <div class="hdr">NPC ID</div>
+  <div class="hdr">Name</div>
+  <div class="hdr">Age</div>
+  <div class="hdr">Occupation</div>
+  <div class="hdr">Alive</div>
+  <div class="hdr">Entropy</div>
+
+  <<for _n range _slice>>
+    <<set _alive = _n.lifecycle.isAlive>>
+    <<set _ent = _n.entropy?.exposure or 0>>
+    <div class="npc-row">
+      <<link _n.id>><<set $inspectedNPC = _n.id>><<goto "NPC Inspector">><</link>>
+    </div>
+    <div class="npc-row"><<=_n.identity.fullName>></div>
+    <div class="npc-row"><<=_n.identity.age>></div>
+    <div class="npc-row"><<=_n.background.occupation>></div>
+    <div class="npc-row"><span class="npc-pill <<= _alive ? 'alive' : 'dead'>><<= _alive ? 'Alive' : 'Dead'>></span></div>
+    <div class="npc-row"><span class="npc-pill entropy"><<= (_ent * 100).toFixed(0) >>%</span></div>
+  <</for>>
+</div>
+
+<!-- Pagination -->
+<div style="margin-top:10px;">
+  <<if _pages > 1>>
+    <<if _page > 1>><<link "Prev">><<set $npcDebugPage = _page - 1>><<goto "NPC Debug">><</link>><</if>>
+    <span> Page <<= _page >> / <<= _pages >> </span>
+    <<if _page < _pages>><<link "Next">><<set $npcDebugPage = _page + 1>><<goto "NPC Debug">><</link>><</if>>
+  <</if>>
+</div>
+
+
+:: NPC Inspector
+<<if !$inspectedNPC>>
+  <p>No NPC selected. Return to <<link "NPC Debug">><<goto "NPC Debug">><</link>></p>
+  <<return>>
+<</if>>
+
+<<set _npc = setup.getNPC($inspectedNPC)>>
+<<if !_npc>>
+  <p>NPC not found: <<= $inspectedNPC >>. Return to <<link "NPC Debug">><<goto "NPC Debug">><</link>></p>
+  <<return>>
+<</if>>
+
+<div class="npc-toolbar">
+  <<link "⟵ Back to list">><<goto "NPC Debug">><</link>>
+  <strong style="margin-left:10px;">Inspecting:</strong> <code><<=_npc.id>></code>
+  <span>— <<= _npc.identity.fullName >> (<<=_npc.identity.age>>)</span>
+</div>
+
+<h4>Overview</h4>
+<ul>
+  <li><b>Alive:</b> <<= _npc.lifecycle.isAlive ? 'Yes' : 'No' >></li>
+  <li><b>Occupation:</b> <<= _npc.background.occupation >></li>
+  <li><b>Entropy Exposure:</b> <<= (_npc.entropy.exposure * 100).toFixed(0) >>%</li>
+  <li><b>HP:</b> <<= _npc.conditions.vitals.hp >> / <<= _npc.derived.hpMax >></li>
+</ul>
+
+<h4>Full Structure</h4>
+<div id="npc-obj">Loading…</div>
+<script>
+(function() {
+  var npc = State.variables.actors[State.variables.inspectedNPC];
+  var html = setup.renderObject(npc);
+  $('#npc-obj').html(html);
+})();
+</script>
+
+<h4>Copy JSON</h4>
+<textarea class="jsonbox" readonly onclick="this.select()"><<= setup.toJSONString(_npc) >></textarea>

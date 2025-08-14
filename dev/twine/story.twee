@@ -52,6 +52,81 @@ if (State.variables._needsInit || !State.variables.legacy) {
 /* Convenience reference */
 State.variables.player = State.variables.pc; // legacy code compatibility
 
+/* ===== NPC debug helpers ===== */
+
+/* Return array of NPC IDs in display order */
+setup.npcIds = function() {
+  // Prefer your saved ordering if present
+  if (State.variables.populationOrder && State.variables.populationOrder.length) {
+    return State.variables.populationOrder.slice();
+  }
+  // else from keys
+  return Object.keys(State.variables.actors || {}).sort();
+};
+
+/* Get an NPC by id safely */
+setup.getNPC = function(id) {
+  return (State.variables.actors && State.variables.actors[id]) || null;
+};
+
+/* Basic predicate filter for list search */
+setup.filterNpc = function(npc, q) {
+  if (!q) return true;
+  q = q.toLowerCase();
+  return (
+    (npc.id || '').toLowerCase().includes(q) ||
+    (npc.identity?.fullName || '').toLowerCase().includes(q) ||
+    (npc.background?.occupation || '').toLowerCase().includes(q)
+  );
+};
+
+/* Example: deterministic 200 NPCs */
+if (setup.NPC && typeof setup.NPC.reseed === 'function') {
+  setup.NPC.reseed("TownSeed:Alpha");
+}
+if (!State.variables.actors) State.variables.actors = {};
+if (!State.variables.populationOrder) State.variables.populationOrder = [];
+
+const _pop = setup.NPC.generatePopulation(200);
+for (const npc of _pop) {
+  State.variables.actors[npc.id] = npc;
+  State.variables.populationOrder.push(npc.id);
+}
+
+/* Pretty recursive renderer => HTML (collapsible <details>) */
+setup.renderObject = function(obj, keyName) {
+  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function render(o, k) {
+    if (o === null || o === undefined) return `<span class="v-null">null</span>`;
+    const t = typeof o;
+    if (t === 'string') return `<span class="v-str">"${esc(o)}"</span>`;
+    if (t === 'number') return `<span class="v-num">${o}</span>`;
+    if (t === 'boolean') return `<span class="v-bool">${o}</span>`;
+    if (Array.isArray(o)) {
+      if (o.length === 0) return `<span class="v-arr">[]</span>`;
+      return `<details open><summary class="k">${esc(k)} [${o.length}]</summary><ul>` +
+        o.map((v,i)=>`<li>${render(v, `${i}`)}</li>`).join('') +
+      `</ul></details>`;
+    }
+    // object
+    const keys = Object.keys(o);
+    if (keys.length === 0) return `<span class="v-null">{}</span>`;
+    const inner = keys.map(sub =>
+      `<li><span class="k">${esc(sub)}:</span> ${render(o[sub], sub)}</li>`
+    ).join('');
+    // if top-level without keyName, just list
+    if (k === undefined) return `<ul class="obj">${inner}</ul>`;
+    return `<details open><summary class="k">${esc(k)}</summary><ul>${inner}</ul></details>`;
+  }
+  return `<div class="obj">${render(obj, keyName)}</div>`;
+};
+
+/* Convenience for copying JSON to a textarea */
+setup.toJSONString = function(o) {
+  try { return JSON.stringify(o, null, 2); } catch(e){ return '/* JSON stringify error */'; }
+};
+
+
 :: StoryMenu
 /* Customize the menu (appears via the sidebar). */
 <<link 'Restart'>><<restart>><</link>> | <<link 'Save'>><<save>><</link>> | <<link 'Load'>><<load>><</link>>
@@ -67,6 +142,7 @@ Current Life: <b>$pc.name</b> (<i>$pc.archetype</i>) — Traits: $pc.traits.join
 <br/>Population: $legacy.populationRoster.length remaining.
 
 [[Continue|Intro]]
+[[NPC Debug|NPC Debug]]
 
 <<link "Start Fresh World" >><<newgame>><</link>> (procedurally regenerate all inhabitants)
 
