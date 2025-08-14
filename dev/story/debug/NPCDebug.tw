@@ -1,52 +1,24 @@
-:: NPC Debug
-<<set _ids = setup.npcIds()>>
-<<set _q = $npcDebugSearch or "">>
-<<set _page = $npcDebugPage or 1>>
-<<set _pageSize = 50>> <!-- tweak for 200+ -->
+:: NPC Debug [nobr]
+<<if !State.variables.actors>><p><em>No NPC data in memory. Did you generate the population in StoryInit?</em></p><<return>><</if>>
+<<set _ids = setup.npcIds()>><<set _q = ($npcDebugSearch || "")>><<set _page = ($npcDebugPage || 1)>><<set _pageSize = 50>>
 
-<div class="npc-toolbar">
-  <input class="npc-search" type="text" placeholder="Search id / name / occupation" value="<<=_q>>"
-         oninput="State.variables.npcDebugSearch = this.value; Engine.play(passage())">
-  <span>Showing <<=_ids.length>> NPCs</span>
-  <<link "Clear search">><<unset $npcDebugSearch>><<run Engine.play(passage())>><</link>>
-</div>
+<div class="npc-toolbar"><<textbox "$npcDebugSearch" "Search id / name / occupation" autofocus>> <span>Showing <<= _ids.length >> NPCs</span> &nbsp;|&nbsp; <<link "Apply">><<goto "NPC Debug">><</link>> &nbsp;|&nbsp; <<link "Clear search">><<unset $npcDebugSearch>><<unset $npcDebugPage>><<goto "NPC Debug">><</link>></div>
 
-<<set _filtered = []>>
-<<for _i to 0; _i lt _ids.length; _i++>>
-  <<set _n = setup.getNPC(_ids[_i])>>
-  <<if _n and setup.filterNpc(_n, _q)>>
-    <<set _filtered.push(_n)>>
-  <</if>>
-<</for>>
-
-<<set _pages = Math.max(1, Math.ceil(_filtered.length / _pageSize))>>
-<<set _page = Math.min(_page, _pages)>>
-<<set _start = (_page - 1) * _pageSize>>
-<<set _slice = _filtered.slice(_start, _start + _pageSize)>>
+<<set _filtered = []>><<for _i = 0; _i < _ids.length; _i += 1>><<set _n = setup.getNPC(_ids[_i])>><<if _n and setup.filterNpc(_n, _q)>><<run _filtered.push(_n)>><</if>><</for>>
+<<set _pages = Math.max(1, Math.ceil(_filtered.length / _pageSize))>><<set _page = Math.min(_page, _pages)>><<set _start = (_page - 1) * _pageSize>><<set _slice = _filtered.slice(_start, _start + _pageSize)>>
 
 <div class="npc-grid">
-  <div class="hdr">NPC ID</div>
-  <div class="hdr">Name</div>
-  <div class="hdr">Age</div>
-  <div class="hdr">Occupation</div>
-  <div class="hdr">Alive</div>
-  <div class="hdr">Entropy</div>
-
-  <<for _n range _slice>>
-    <<set _alive = _n.lifecycle.isAlive>>
-    <<set _ent = _n.entropy?.exposure or 0>>
-    <div class="npc-row">
-      <<link _n.id>><<set $inspectedNPC = _n.id>><<goto "NPC Inspector">><</link>>
-    </div>
-    <div class="npc-row"><<=_n.identity.fullName>></div>
-    <div class="npc-row"><<=_n.identity.age>></div>
-    <div class="npc-row"><<=_n.background.occupation>></div>
-    <div class="npc-row"><span class="npc-pill <<= _alive ? 'alive' : 'dead'>><<= _alive ? 'Alive' : 'Dead'>></span></div>
-    <div class="npc-row"><span class="npc-pill entropy"><<= (_ent * 100).toFixed(0) >>%</span></div>
+  <div class="hdr">NPC ID</div><div class="hdr">Name</div><div class="hdr">Age</div><div class="hdr">Occupation</div><div class="hdr">Alive</div><div class="hdr">Entropy</div>
+  <<for _j = 0; _j < _slice.length; _j += 1>><<set _n = _slice[_j]>><<set _alive = _n.lifecycle.isAlive>><<set _ent = (_n.entropy && _n.entropy.exposure) || 0>>
+  <div class="npc-row"><<link _n.id>><<set $inspectedNPC = _n.id>><<goto "NPC Inspector">><</link>></div>
+  <div class="npc-row"><<= _n.identity.fullName >></div>
+  <div class="npc-row"><<= _n.identity.age >></div>
+  <div class="npc-row"><<= _n.background.occupation >></div>
+  <div class="npc-row"><span class="npc-pill <<= _alive ? 'alive' : 'dead' >>"><<= _alive ? 'Alive' : 'Dead' >></span></div>
+  <div class="npc-row"><span class="npc-pill entropy"><<= Math.round(_ent * 100) >>%</span></div>
   <</for>>
 </div>
 
-<!-- Pagination -->
 <div style="margin-top:10px;">
   <<if _pages > 1>>
     <<if _page > 1>><<link "Prev">><<set $npcDebugPage = _page - 1>><<goto "NPC Debug">><</link>><</if>>
@@ -56,41 +28,22 @@
 </div>
 
 
-:: NPC Inspector
-<<if !$inspectedNPC>>
-  <p>No NPC selected. Return to <<link "NPC Debug">><<goto "NPC Debug">><</link>></p>
-  <<return>>
-<</if>>
-
+:: NPC Inspector [nobr]
+<<if !$inspectedNPC>><p>No NPC selected. <<link "Back to NPC Debug">><<goto "NPC Debug">><</link>></p><<return>><</if>>
 <<set _npc = setup.getNPC($inspectedNPC)>>
-<<if !_npc>>
-  <p>NPC not found: <<= $inspectedNPC >>. Return to <<link "NPC Debug">><<goto "NPC Debug">><</link>></p>
-  <<return>>
-<</if>>
+<<if !_npc>><p>NPC not found: <<= $inspectedNPC >>. <<link "Back to NPC Debug">><<goto "NPC Debug">><</link>></p><<return>><</if>>
+
+<!-- Working draft copy -->
+<<if !$npcDraft or $npcDraft.id != _npc.id>><<set $npcDraft = setup.deepClone(_npc)>><</if>>
 
 <div class="npc-toolbar">
-  <<link "⟵ Back to list">><<goto "NPC Debug">><</link>>
-  <strong style="margin-left:10px;">Inspecting:</strong> <code><<=_npc.id>></code>
-  <span>— <<= _npc.identity.fullName >> (<<=_npc.identity.age>>)</span>
+  <<link "⟵ Back to NPC Debug">><<goto "NPC Debug">><</link>>
+  <strong style="margin-left:10px;">Editing:</strong> <code><<= $npcDraft.id >></code>
+  <span> — <<= $npcDraft.identity.fullName >> (<<= $npcDraft.identity.age >>)</span>
 </div>
 
-<h4>Overview</h4>
-<ul>
-  <li><b>Alive:</b> <<= _npc.lifecycle.isAlive ? 'Yes' : 'No' >></li>
-  <li><b>Occupation:</b> <<= _npc.background.occupation >></li>
-  <li><b>Entropy Exposure:</b> <<= (_npc.entropy.exposure * 100).toFixed(0) >>%</li>
-  <li><b>HP:</b> <<= _npc.conditions.vitals.hp >> / <<= _npc.derived.hpMax >></li>
-</ul>
+<<set _form = setup.renderNPCEditor($npcDraft)>>
+<<= _form >>
 
-<h4>Full Structure</h4>
-<div id="npc-obj">Loading…</div>
-<script>
-(function() {
-  var npc = State.variables.actors[State.variables.inspectedNPC];
-  var html = setup.renderObject(npc);
-  $('#npc-obj').html(html);
-})();
-</script>
+<<run setup.bindNPCEditor($npcDraft.id)>>
 
-<h4>Copy JSON</h4>
-<textarea class="jsonbox" readonly onclick="this.select()"><<= setup.toJSONString(_npc) >></textarea>

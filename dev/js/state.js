@@ -30,17 +30,48 @@
 		};
 	}
 
-	setup.rng = {
-		seedString: null,
-		rand: Math.random,
-		reseed(str) {
-			this.seedString = str;
-			const seedGen = xmur3(str);
-			this.rand = sfc32(seedGen(), seedGen(), seedGen(), seedGen());
-		},
-		pick(arr) { return arr.length ? arr[Math.floor(this.rand()*arr.length)] : undefined; },
-		roll(min, max) { return Math.floor(this.rand()*(max - min + 1)) + min; }
-	};
+	// Respect an existing RNG (e.g., from npc.js), otherwise create one; in both cases ensure helpers exist.
+	(function ensureRng(){
+		const epoch = 1700000000000; // align with npc.js default
+		if (!setup.rng || typeof setup.rng.rand !== 'function') {
+			const seedString = 'cod-default';
+			const seedGen = xmur3(seedString);
+			const rng = sfc32(seedGen(), seedGen(), seedGen(), seedGen());
+			let ticks = 0;
+			setup.rng = {
+				seedString,
+				rand: rng,
+				reseed(str){
+					this.seedString = str;
+					const g = xmur3(str);
+					this.rand = sfc32(g(), g(), g(), g());
+					ticks = 0;
+				},
+				pick(arr){ return (arr && arr.length) ? arr[Math.floor(this.rand()*arr.length)] : undefined; },
+				roll(min, max){ return Math.floor(this.rand()*(max - min + 1)) + min; },
+				rollInt(min, max){ return Math.floor(this.rand()*(max - min + 1)) + min; },
+				rollFloat(min, max){ return this.rand()*(max - min) + min; },
+				chance(p){ return this.rand() < p; },
+				nowISO(){ return new Date(epoch + (ticks++) * 137).toISOString(); }
+			};
+		} else {
+			const r = setup.rng;
+			if (!r.pick) r.pick = arr => (arr && arr.length) ? arr[Math.floor(r.rand()*arr.length)] : undefined;
+			if (!r.roll && !r.rollInt) r.rollInt = (min,max) => Math.floor(r.rand()*(max - min + 1)) + min;
+			if (!r.rollFloat) r.rollFloat = (min,max) => r.rand()*(max - min) + min;
+			if (!r.chance) r.chance = p => r.rand() < p;
+			if (!r.nowISO) {
+				let ticks = 0; const ep = epoch;
+				r.nowISO = () => new Date(ep + (ticks++) * 137).toISOString();
+			}
+			if (!r.reseed) {
+				r.reseed = function(str){
+					const g = xmur3(String(str));
+					this.rand = sfc32(g(), g(), g(), g());
+				};
+			}
+		}
+	})();
 
 	/* ================= Trait & Archetype Definitions ================= */
 	setup.Traits = [

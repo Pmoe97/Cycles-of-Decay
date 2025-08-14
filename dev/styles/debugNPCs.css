@@ -1,9 +1,10 @@
 /* Debug NPC list grid */
 .npc-grid {
   display: grid;
-  grid-template-columns: 1.2fr 1.6fr 0.7fr 1.2fr 0.7fr 0.8fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
   gap: 6px 10px;
   align-items: center;
+  width: 65px;
 }
 .npc-grid .hdr {
   font-weight: 700;
@@ -11,8 +12,8 @@
   padding-bottom: 4px;
 }
 .npc-row {
-  padding: 2px 0;
   border-bottom: 1px dashed rgba(0,0,0,.08);
+  padding: 1px 0;  /* was 2px */
 }
 .npc-row:hover {
   background: rgba(255,255,255,.04);
@@ -45,3 +46,17 @@
 .obj details { border-left: 2px solid rgba(255,255,255,.1); margin-left: 4px; padding-left: 6px; }
 .obj summary { cursor: pointer; }
 textarea.jsonbox { width: 100%; min-height: 200px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+
+.npc-edit-form { display:block; max-width: 980px; }
+.npc-edit-form .row { display:grid; grid-template-columns: 220px 1fr; align-items: center; gap:10px; margin: 6px 0; }
+.npc-edit-form .row label { font-weight:600; white-space:nowrap; }
+.npc-edit-form .row input[type="text"],
+.npc-edit-form .row input[type="number"],
+.npc-edit-form .row textarea { width:100%; }
+.npc-edit-form .row textarea { min-height: 84px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+.npc-edit-form .grp { margin: 8px 0; }
+.npc-edit-form .grp > summary { cursor: pointer; font-weight:700; margin: 4px 0; }
+.npc-edit-form .hint { font-size: 0.85em; opacity: .7; }
+.npc-edit-form .btns { display:flex; gap:10px; margin-top: 14px; }
+.ui-button { padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.2); cursor:pointer; background: rgba(255,255,255,.06); }
+.ui-button.secondary { background: transparent; }

@@ -1,0 +1,37 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build Twine with Tweego",
+			"type": "shell",
+			"command": "tweego",
+			"args": [
+				"-o",
+				"build/index.html",
+				"-f",
+				"sugarcube-2",
+				"dev"
+			],
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build Twine with Tweego",
+			"type": "shell",
+			"command": "tweego",
+			"args": [
+				"-o",
+				"build/index.html",
+				"-f",
+				"sugarcube-2",
+				"dev"
+			],
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		}
+	]
+}

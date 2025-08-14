@@ -104,9 +104,10 @@ var saveAs=saveAs||navigator.msSaveBlob&&navigator.msSaveBlob.bind(navigator)||f
 /* Debug NPC list grid */
 .npc-grid {
   display: grid;
-  grid-template-columns: 1.2fr 1.6fr 0.7fr 1.2fr 0.7fr 0.8fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
   gap: 6px 10px;
   align-items: center;
+  width: 65px;
 }
 .npc-grid .hdr {
   font-weight: 700;
@@ -114,8 +115,8 @@ var saveAs=saveAs||navigator.msSaveBlob&&navigator.msSaveBlob.bind(navigator)||f
   padding-bottom: 4px;
 }
 .npc-row {
-  padding: 2px 0;
   border-bottom: 1px dashed rgba(0,0,0,.08);
+  padding: 1px 0;  /* was 2px */
 }
 .npc-row:hover {
   background: rgba(255,255,255,.04);
@@ -148,6 +149,20 @@ var saveAs=saveAs||navigator.msSaveBlob&&navigator.msSaveBlob.bind(navigator)||f
 .obj details { border-left: 2px solid rgba(255,255,255,.1); margin-left: 4px; padding-left: 6px; }
 .obj summary { cursor: pointer; }
 textarea.jsonbox { width: 100%; min-height: 200px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+
+.npc-edit-form { display:block; max-width: 980px; }
+.npc-edit-form .row { display:grid; grid-template-columns: 220px 1fr; align-items: center; gap:10px; margin: 6px 0; }
+.npc-edit-form .row label { font-weight:600; white-space:nowrap; }
+.npc-edit-form .row input[type="text"],
+.npc-edit-form .row input[type="number"],
+.npc-edit-form .row textarea { width:100%; }
+.npc-edit-form .row textarea { min-height: 84px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+.npc-edit-form .grp { margin: 8px 0; }
+.npc-edit-form .grp > summary { cursor: pointer; font-weight:700; margin: 4px 0; }
+.npc-edit-form .hint { font-size: 0.85em; opacity: .7; }
+.npc-edit-form .btns { display:flex; gap:10px; margin-top: 14px; }
+.ui-button { padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.2); cursor:pointer; background: rgba(255,255,255,.06); }
+.ui-button.secondary { background: transparent; }
 /* twine-user-stylesheet #2: "game.css" */
 /* Core styles for Cycles of Decay */
 body {
@@ -185,7 +200,154 @@ body {
 /* Example variable overrides */
 :root {
 	--cod-accent: #8fd1ff;
-}</style><script role="script" id="twine-user-script" type="text/twine-javascript">/* twine-user-script #1: "init.js" */
+}</style><script role="script" id="twine-user-script" type="text/twine-javascript">/* twine-user-script #1: "datacheck.js" */
+/* dev/data/npc/datacheck.js */
+window.setup = window.setup || {};
+(function(){
+  Macro.add('datacheck', {
+    handler() {
+      const out = [];
+      function assert(cond, msg){ if(!cond) out.push('✗ ' + msg); }
+      const D = setup.data || {};
+      ['enums','traits','occupations','injuries','items','equipmentPools','names','locations','schedules']
+        .forEach(k => assert(D[k], `Missing setup.data.${k}`));
+
+      const items = new Set((D.items||[]).map(x=>x.id));
+      const locs  = new Set((D.locations||[]).map(x=>x.id));
+
+      const P = D.equipmentPools || {};
+      ['clothing_body','clothing_hands','mainHand'].forEach(pool => {
+        (P[pool]||[]).forEach(id => { if (id && !items.has(id)) out.push(`✗ equipmentPools.${pool}: unknown item ${id}`); });
+      });
+      (P.pack||[]).forEach(p => { if (!items.has(p.id)) out.push(`✗ equipmentPools.pack: unknown item ${p.id}`); });
+
+      const S = D.schedules || {};
+      Object.keys(S).forEach(k => (S[k]||[]).forEach(b => {
+        if (!locs.has(b.at)) out.push(`✗ schedules.${k} → unknown location ${b.at}`);
+      }));
+
+      new Wikifier(this.output, out.length ? out.join('<br>') : '✔ Data OK');
+    }
+  });
+})();
+/* twine-user-script #2: "enums.js" */
+/* dev/data/npc/enums.js */
+window.setup = window.setup || {};
+setup.data = setup.data || {};
+setup.data.enums = setup.data.enums || {
+  bodyStatus: ["ok","injured","missing","prosthetic","scarred"],
+  species: ["human"],
+  genders: ["female","male","nonbinary"],
+  pronouns: ["she/her","he/him","they/them"],
+  wards: ["Lower_Riverside_District","Old_Docks","Market_Row","Hill_Side"]
+};
+/* twine-user-script #3: "equipmentPools.js" */
+/* dev/data/npc/equipmentPools.js */
+window.setup = window.setup || {};
+setup.data = setup.data || {};
+setup.data.equipmentPools = setup.data.equipmentPools || {
+  clothing_body: ["itm_paramedic_vest","itm_worn_jacket", null],
+  clothing_hands:["itm_work_gloves", null],
+  mainHand: ["itm_rescue_shears","itm_pocket_knife", null],
+  pack: [
+    {"id":"itm_bandage","qty":[1,5]},
+    {"id":"itm_painkiller_tabs","qty":[1,3]},
+    {"id":"itm_water_bottle","qty":[1,1]},
+    {"id":"itm_energy_bar","qty":[1,4]},
+    {"id":"itm_flashlight","qty":[1,1], "durability":0.6}
+  ]
+};
+/* twine-user-script #4: "injuries.js" */
+/* dev/data/npc/injuries.js */
+window.setup = window.setup || {};
+setup.data = setup.data || {};
+setup.data.injuries = setup.data.injuries || [
+  {"id":"sprained_ankle","location":"l_leg","severityRange":[0.2,0.6],"mods":{"AGI":-1,"move_mult":0.8},"tags":["injury","mobility"],"defaultTreat":["rest","wrap","painkiller"]},
+  {"id":"fractured_wrist","location":"r_arm","severityRange":[0.3,0.7],"mods":{"AGI":-1,"STR":-1,"melee_pct":-0.2},"tags":["injury","dexterity"],"defaultTreat":["splint","rest"]},
+  {"id":"concussion_mild","location":"head","severityRange":[0.1,0.3],"mods":{"INT":-1,"WIS":-1,"awareness_pct":-0.1},"tags":["injury","cognitive"],"defaultTreat":["rest","dark_room"]}
+];
+/* twine-user-script #5: "items.js" */
+/* dev/data/npc/items.js */
+window.setup = window.setup || {};
+setup.data = setup.data || {};
+setup.data.items = setup.data.items || [
+  {"id":"itm_paramedic_vest","type":"armor","slot":"body","durability":0.8},
+  {"id":"itm_worn_jacket","type":"armor","slot":"body","durability":0.5},
+  {"id":"itm_work_gloves","type":"armor","slot":"hands","durability":0.7},
+  {"id":"itm_rescue_shears","type":"tool","slot":"mainHand","durability":0.9},
+  {"id":"itm_pocket_knife","type":"weapon","slot":"mainHand","durability":0.6},
+  {"id":"itm_bandage","type":"consumable","stackable":true},
+  {"id":"itm_painkiller_tabs","type":"consumable","stackable":true},
+  {"id":"itm_water_bottle","type":"consumable","stackable":false},
+  {"id":"itm_energy_bar","type":"consumable","stackable":true},
+  {"id":"itm_flashlight","type":"tool","slot":"pack","durability":0.6}
+];
+/* twine-user-script #6: "locations.js" */
+/* dev/data/npc/locations.js */
+window.setup = window.setup || {};
+setup.data = setup.data || {};
+setup.data.locations = setup.data.locations || [
+  {"id":"LOC_Clinic","tags":["work","medical"]},
+  {"id":"LOC_Riverside","tags":["outdoor"]},
+  {"id":"LOC_AshSpire_Perimeter","tags":["structure"]},
+  {"id":"LOC_Grocery","tags":["shop"]},
+  {"id":"LOC_Apt_1A","tags":["home"]},
+  {"id":"LOC_Apt_2B","tags":["home"]}
+];
+/* twine-user-script #7: "names.js" */
+/* dev/data/npc/names.js */
+window.setup = window.setup || {};
+setup.data = setup.data || {};
+setup.data.names = setup.data.names || {
+  first: {
+    generic: ["Mara","Elijah","Rowan","Iris","Caleb","Nadia","Jonah","Selene","Felix","Anya","Micah","Kira"]
+  },
+  last: {
+    generic: ["Delaney","Harper","Voss","Kline","Ramos","Okoye","Nakamura","Santos","Bishop","Singh","Morozov","Yang"]
+  }
+};
+/* twine-user-script #8: "occupations.js" */
+/* dev/data/npc/occupations.js */
+window.setup = window.setup || {};
+setup.data = setup.data || {};
+setup.data.occupations = setup.data.occupations || [
+  {"id":"paramedic","base":{"STR":4,"AGI":5,"END":6,"FOR":7,"CHA":6,"INT":5,"WIS":6},"traitBias":["empathetic","methodical"],"factions":["FAC_TownClinic"],"schedule":"paramedic"},
+  {"id":"laborer","base":{"STR":6,"AGI":5,"END":6,"FOR":5,"CHA":4,"INT":4,"WIS":4},"traitBias":["resilient","dogged"],"schedule":"laborer"},
+  {"id":"scribe","base":{"STR":3,"AGI":4,"END":4,"FOR":4,"CHA":5,"INT":7,"WIS":6},"traitBias":["observant","anxious"],"schedule":"scribe"},
+  {"id":"scavenger","base":{"STR":5,"AGI":6,"END":5,"FOR":5,"CHA":4,"INT":5,"WIS":5},"traitBias":["observant","dogged"],"schedule":"scavenger"},
+  {"id":"vendor","base":{"STR":4,"AGI":4,"END":5,"FOR":4,"CHA":7,"INT":5,"WIS":5},"traitBias":["charismatic","methodical"],"schedule":"vendor"},
+  {"id":"vagrant","base":{"STR":4,"AGI":5,"END":5,"FOR":5,"CHA":3,"INT":4,"WIS":5},"traitBias":["frail","stoic"],"schedule":"vagrant"}
+];
+/* twine-user-script #9: "schedules.js" */
+/* dev/data/npc/schedules.js */
+window.setup = window.setup || {};
+setup.data = setup.data || {};
+setup.data.schedules = setup.data.schedules || {
+  "paramedic":[{"days":"Mon-Fri","start":"07:00","end":"15:00","at":"LOC_Clinic"}],
+  "laborer":[{"days":"Mon-Fri","start":"06:00","end":"14:00","at":"LOC_Docks"}],
+  "scribe":[{"days":"Mon-Fri","start":"09:00","end":"17:00","at":"LOC_Hall"}],
+  "scavenger":[{"days":"Mon-Sat","start":"08:00","end":"13:00","at":"LOC_Riverside"}],
+  "vendor":[{"days":"Mon-Sat","start":"10:00","end":"18:00","at":"LOC_Market"}],
+  "vagrant":[{"days":"*","start":"00:00","end":"23:59","at":"LOC_AshSpire_Perimeter"}]
+};
+/* twine-user-script #10: "traits.js" */
+/* dev/data/npc/traits.js */
+window.setup = window.setup || {};
+setup.data = setup.data || {};
+setup.data.traits = setup.data.traits || [
+  {"id":"empathetic","tags":["social","care"],"mods":{"CHA":1},"weight":1},
+  {"id":"methodical","tags":["order"],"mods":{"INT":1},"weight":1},
+  {"id":"risk-averse","tags":["caution"],"mods":{},"weight":1},
+  {"id":"resilient","tags":["tough"],"mods":{"END":1,"FOR":1},"weight":1},
+  {"id":"frail","tags":["tough"],"mods":{"END":-1},"weight":1},
+  {"id":"observant","tags":["perception"],"mods":{"WIS":1},"weight":1},
+  {"id":"oblivious","tags":["perception"],"mods":{"WIS":-1},"weight":1},
+  {"id":"dogged","tags":["will"],"mods":{"FOR":1},"weight":1},
+  {"id":"anxious","tags":["will"],"mods":{"FOR":-1},"weight":1},
+  {"id":"stoic","tags":["will"],"mods":{"CHA":-1,"FOR":1},"weight":1},
+  {"id":"charismatic","tags":["social"],"mods":{"CHA":1},"weight":1}
+];
+/* twine-user-script #11: "init.js" */
 /* SugarCube setup & initialization for Cycles of Decay */
 (function () {
 	'use strict';
@@ -204,12 +366,483 @@ body {
 		buildTime: new Date().toISOString()
 	};
 
+	/* Provide simple link macros if missing (compat with various configs) */
+	if (!Macro.get('restart')) {
+		Macro.add('restart', { handler() { Engine.restart(); } });
+	}
+	if (!Macro.get('save')) {
+		Macro.add('save', { handler() { Save.save(); } });
+	}
+	if (!Macro.get('load')) {
+		Macro.add('load', { handler() { Save.load(); } });
+	}
+
 	/* Macro examples placeholder (add custom macros in separate file if desired) */
 })();
-/* twine-user-script #2: "macros.js" */
-/* Minimal shape checker comparing npc -> sample */
+
+/* ===== NPC Editor helpers (load early) ===== */
+(function () {
+  'use strict';
+  window.setup = window.setup || {};
+
+  // idempotent guards
+  if (!setup.deepClone) setup.deepClone = (obj) => JSON.parse(JSON.stringify(obj));
+
+  if (!setup.setByPath) setup.setByPath = function (obj, path, value) {
+    const parts = path.split('.'); let cur = obj;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const k = parts[i]; if (cur[k] == null || typeof cur[k] !== 'object') cur[k] = {};
+      cur = cur[k];
+    }
+    cur[parts[parts.length - 1]] = value;
+  };
+
+  if (!setup.getByPath) setup.getByPath = function (obj, path) {
+    const parts = path.split('.'); let cur = obj;
+    for (let i = 0; i < parts.length; i++) { if (cur == null) return undefined; cur = cur[parts[i]]; }
+    return cur;
+  };
+
+  function niceKey(k) { return k.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase()); }
+  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  if (!setup.renderNPCEditor) setup.renderNPCEditor = function (npcDraft) {
+    const rows = [];
+    function field(path, key, val) {
+      const full = path ? path + '.' + key : key;
+      const label = esc(niceKey(key));
+
+      if (val === null || val === undefined) {
+        rows.push(`<div class="row"><label>${label}</label><input class="npc-edit" data-type="string" data-path="${esc(full)}" value=""></div>`); return;
+      }
+      if (Array.isArray(val)) {
+        rows.push(`<details open class="grp"><summary>${label} [Array ${val.length}]</summary>
+          <div class="row"><label>JSON</label>
+          <textarea class="npc-edit" data-type="array" data-path="${esc(full)}">${esc(JSON.stringify(val))}</textarea>
+          <div class="hint">Enter JSON array (e.g., ["a","b"] or [1,2,3]).</div></div></details>`); return;
+      }
+      if (typeof val === 'object') {
+        const inner = Object.keys(val).map(k => (field(full, k, val[k]) || '')).join('');
+        rows.push(`<details open class="grp"><summary>${label} [Object]</summary>${inner}</details>`); return;
+      }
+      if (typeof val === 'boolean') {
+        rows.push(`<div class="row"><label>${label}</label><input class="npc-edit" data-type="boolean" data-path="${esc(full)}" type="checkbox" ${val ? 'checked' : ''}></div>`); return;
+      }
+      if (typeof val === 'number') {
+        rows.push(`<div class="row"><label>${label}</label><input class="npc-edit" data-type="number" data-path="${esc(full)}" type="number" step="any" value="${val}"></div>`); return;
+      }
+      rows.push(`<div class="row"><label>${label}</label><input class="npc-edit" data-type="string" data-path="${esc(full)}" value="${esc(val)}"></div>`);
+    }
+
+    const order = ['id','version','lifecycle','identity','background','personality','attributes','derived','skills','conditions','entropy','inventory','relationships','knowledge','behavior','flags','debug'];
+    order.forEach(k => { if (Object.prototype.hasOwnProperty.call(npcDraft, k)) field('', k, npcDraft[k]); });
+    Object.keys(npcDraft).forEach(k => { if (!order.includes(k)) field('', k, npcDraft[k]); });
+
+    return `<form id="npc-edit-form" class="npc-edit-form">
+      ${rows.join('')}
+      <div class="btns"><button type="button" id="npc-save" class="ui-button">Save</button>
+      <button type="button" id="npc-cancel" class="ui-button secondary">Cancel</button></div>
+    </form>`;
+  };
+
+  if (!setup.bindNPCEditor) setup.bindNPCEditor = function (npcId) {
+    function readControlsIntoDraft() {
+      var draft = State.variables.npcDraft;
+      $('.npc-edit').each(function () {
+        var t = this.getAttribute('data-type');
+        var p = this.getAttribute('data-path');
+        var v;
+        if (t === 'boolean') v = this.checked;
+        else if (t === 'number') { var n = this.value.trim(); v = n === '' ? 0 : Number(n); }
+        else if (t === 'array') { var txt = this.value.trim(); try { v = txt ? JSON.parse(txt) : []; } catch (e) { v = []; } }
+        else v = this.value;
+        setup.setByPath(draft, p, v);
+      });
+    }
+    $('#npc-save').on('click', function () {
+      readControlsIntoDraft();
+      var id = npcId;
+      State.variables.actors[id] = State.variables.npcDraft;
+      UI.alert('Saved changes to ' + id);
+    });
+    $('#npc-cancel').on('click', function () { Engine.play('NPC Inspector'); });
+  };
+
+})();
+
+/* twine-user-script #12: "macros.js" */
+
+Macro.add('datacheck', {
+  handler() {
+    const out = [];
+    function assert(cond, msg){ if(!cond) out.push('✗ ' + msg); }
+
+    // basic presence
+    const D = setup.data || {};
+    ['enums','traits','occupations','injuries','items','equipmentPools','names','locations','schedules']
+      .forEach(k => assert(D[k], `Missing setup.data.${k}`));
+
+    // referential checks
+    const itemIds = new Set((D.items||[]).map(x=>x.id));
+    const locIds  = new Set((D.locations||[]).map(x=>x.id));
+
+    // equipment pool ids exist
+    const P = D.equipmentPools || {};
+    ['clothing_body','clothing_hands','mainHand'].forEach(pool => {
+      (P[pool]||[]).forEach(id => {
+        if (id && !itemIds.has(id)) out.push(`✗ equipmentPools.${pool}: unknown item ${id}`);
+      });
+    });
+
+    // pack ids exist
+    (P.pack||[]).forEach(p => { if (!itemIds.has(p.id)) out.push(`✗ equipmentPools.pack: unknown item ${p.id}`); });
+
+    // schedule locations exist
+    const S = D.schedules || {};
+    Object.keys(S).forEach(k => S[k].forEach(b => {
+      if (!locIds.has(b.at)) out.push(`✗ schedules.${k} points to unknown location ${b.at}`);
+    }));
+
+    new Wikifier(this.output, out.length ? out.join('<br>') : '✔ Data OK');
+  }
+});
+/* twine-user-script #13: "npc.js" */
+/* Rich NPC generation system for Cycles of Decay (SugarCube)
+ * Iteration 3: pulls authorable pools from setup.data (dev/data/*.js),
+ * deterministic RNG, affliction->attr mods, occupation schedules,
+ * enums mirror, validation, padded IDs, deterministic names fallback.
+ */
+(function () {
+  'use strict';
+  if (!window.setup) window.setup = {};
+  const SCHEMA_VERSION = 1;
+
+  /* ================= Seeded RNG (Mulberry32) & helpers ================= */
+  function hashString(str) { let h = 2166136261 >>> 0; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function makeRNG(seedInit) {
+    let s = (typeof seedInit === 'string' ? hashString(seedInit) : (seedInit >>> 0)) || 0xC0FFEE;
+    let ticks = 0; const epoch = 1700000000000;
+    function mulberry32() { s += 0x6D2B79F5; let t = Math.imul(s ^ (s >>> 15), 1 | s); t ^= t + Math.imul(t ^ (t >>> 7), 61 | t); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+    const api = {
+      get seed() { return s >>> 0; },
+      rand() { return mulberry32(); },
+      rollInt(min, max) { return Math.floor(api.rand() * (max - min + 1)) + min; },
+      rollFloat(min, max) { return api.rand() * (max - min) + min; },
+      chance(p) { return api.rand() < p; },
+      pick(arr) { return arr[Math.floor(api.rand() * arr.length)]; },
+      nowISO() { return new Date(epoch + (ticks++) * 137).toISOString(); },
+      reseed(n) { s = (typeof n === 'string' ? hashString(n) : (n >>> 0)); ticks = 0; }
+    };
+    return api;
+  }
+  if (!setup.rng || typeof setup.rng.rand !== 'function') setup.rng = makeRNG(0xC0FFEE);
+  else {
+    const r = setup.rng;
+    if (!r.rollInt) r.rollInt = (min, max) => Math.floor(r.rand() * (max - min + 1)) + min;
+    if (!r.rollFloat) r.rollFloat = (min, max) => r.rand() * (max - min) + min;
+    if (!r.chance) r.chance = p => r.rand() < p;
+    if (!r.pick) r.pick = arr => arr[Math.floor(r.rand() * arr.length)];
+    if (!r.nowISO) { let ticks = 0, epoch = 1700000000000; r.nowISO = () => new Date(epoch + (ticks++) * 137).toISOString(); }
+    if (!r.reseed) r.reseed = _ => void 0;
+  }
+
+  /* ================= Small utils ================= */
+  const clone = (obj) => JSON.parse(JSON.stringify(obj));
+  const clamp = (v, lo, hi) => (v < lo ? lo : (v > hi ? hi : v));
+  const pick = (a) => setup.rng.pick(a);
+  const rollInt = (a, b) => setup.rng.rollInt(a, b);
+  const rollFloat = (a, b) => setup.rng.rollFloat(a, b);
+  const chance = (p) => setup.rng.chance(p);
+
+  /* ================= Authorable data (dev/data/*.js) ================= */
+  const D = setup.data || {};
+  // Canonical enums from data, plus a compatibility mirror on setup.enums
+  const Enums = D.enums || { bodyStatus:['ok','injured','missing','prosthetic','scarred'], species:['human'], genders:['female','male','nonbinary'], pronouns:['she/her','he/him','they/them'], wards:['Lower_Riverside_District'] };
+  setup.enums = Object.assign({} , setup.enums || {}, Enums); // keep legacy code happy
+
+  const Species          = Enums.species || ['human'];
+  const Genders          = Enums.genders || ['female','male','nonbinary'];
+  const PronounSets      = (Enums.pronouns || ['they/them']).map(p => ({pronouns:p}));
+  const Wards            = Enums.wards || ['Lower_Riverside_District'];
+
+  const PersonalityTraits = D.traits || [];        // [{id,tags,mods,weight}]
+  const Occupations       = D.occupations || [];   // [{id,base,traitBias,factions,schedule?}]
+  const InjuryCatalog     = D.injuries || [];      // [{id,location,severityRange,mods,tags,defaultTreat}]
+  const ItemsDB           = D.items || [];         // [{id,type,slot,durability,...}]
+  const EquipPools        = D.equipmentPools || {}; // {clothing_body:[ids], clothing_hands:[ids], mainHand:[ids], pack:[{id,qty:[min,max],durability?}]}
+  const Names             = D.names || { first:{generic:['Alex','Iris','Rowan']}, last:{generic:['Harper','Voss','Kline']} };
+  const LocationsTable    = D.locations || [{id:'LOC_Apt_1A'}];
+  const SchedulesByOcc    = D.schedules || {};     // { occupationId: [ {days,start,end,at} ] }
+
+  const LocationPool = LocationsTable.map(l => l.id);
+
+  /* ================= Weighted pick (respects .weight & bias) ================= */
+  function weightedPick(list, biasIds) {
+    if (!list || !list.length) return undefined;
+    const bias = new Set(biasIds || []);
+    let total = 0;
+    const weights = list.map(item => {
+      const id = item && item.id ? item.id : item;
+      let w = Number(item && item.weight != null ? item.weight : 1);
+      if (bias.has(id)) w *= 2; // tweak bias multiplier as desired
+      total += w;
+      return w;
+    });
+    let r = setup.rng.rand() * total;
+    for (let i = 0; i < list.length; i++) { if ((r -= weights[i]) <= 0) return list[i]; }
+    return list[list.length - 1];
+  }
+
+  /* ================= Name generator (from setup.data.names) ================= */
+  function generateName() {
+    const fPool = (Names.first && (Names.first.generic || Names.first)) || ['Alex','Iris','Rowan'];
+    const lPool = (Names.last  && (Names.last.generic  || Names.last )) || ['Harper','Voss','Kline'];
+    const f = pick(fPool); const l = pick(lPool);
+    return f + ' ' + l;
+  }
+
+  /* ================= Attributes / Mods ================= */
+  function applyPersonalityMods(attrs, traits) {
+    traits.forEach(tid => {
+      const def = PersonalityTraits.find(t => t.id === tid);
+      if (def && def.mods) Object.keys(def.mods).forEach(k => { attrs[k] = (attrs[k] || 0) + def.mods[k]; });
+    });
+  }
+  function accumulateAfflictionAttrMods(afflictions) {
+    const mods = { STR:0, AGI:0, END:0, FOR:0, CHA:0, INT:0, WIS:0 };
+    (afflictions || []).forEach(a => {
+      if (!a || !a.mods) return;
+      for (const k in mods) if (typeof a.mods[k] === 'number') mods[k] += a.mods[k];
+    });
+    return mods;
+  }
+  function effectiveAttributes(base, extraMods) {
+    const eff = {};
+    for (const k of ['STR','AGI','END','FOR','CHA','INT','WIS']) eff[k] = clamp((base[k]||0) + (extraMods?.[k]||0), 1, 12);
+    return eff;
+  }
+  function computeDerived(aEff) {
+    return {
+      hpMax: Math.round(10 + aEff.END * 1.5 + aEff.FOR * 1.5),
+      staminaMax: Math.round(30 + aEff.END * 2 + aEff.AGI * 2),
+      carryCap: Math.round(10 + aEff.STR * 4 + aEff.END * 1),
+      moveSpeed: +(3 + aEff.AGI * 0.3).toFixed(2),
+      initiative: aEff.AGI + aEff.WIS + rollInt(1, 6),
+      perception: Math.round(40 + aEff.WIS * 3 + aEff.INT * 1),
+      resistPain: Math.round(30 + aEff.FOR * 3 + aEff.END * 2),
+      resistFear: Math.round(30 + aEff.FOR * 3 + aEff.WIS * 2),
+      resistDisease: Math.round(20 + aEff.END * 3 + aEff.WIS * 1),
+      critChance: +(0.05 + (aEff.AGI + aEff.WIS) / 400).toFixed(3)
+    };
+  }
+
+  /* ================= Items & equipment helpers ================= */
+  function findItem(id) { return id ? (ItemsDB.find(x => x.id === id) || { id }) : null; }
+  function makeEquipEntry(id) {
+    if (!id) return null;
+    const def = findItem(id);
+    const ent = { id: def.id };
+    if (typeof def.durability === 'number') ent.durability = def.durability;
+    return ent;
+  }
+
+  /* ================= Injuries ================= */
+  function maybeGenerateInjuries() {
+    const injuries = [];
+    if (chance(0.25)) {
+      const count = chance(0.6) ? 1 : 2;
+      for (let i = 0; i < count; i++) {
+        const tmpl = pick(InjuryCatalog);
+        if (!tmpl) continue;
+        const severity = +rollFloat(tmpl.severityRange[0], tmpl.severityRange[1]).toFixed(2);
+        injuries.push({ id: tmpl.id, location: tmpl.location, onset: setup.rng.nowISO(), severity,
+          tags: (tmpl.tags||[]).slice(), mods: clone(tmpl.mods||{}), treatment: (tmpl.defaultTreat||[]).slice() });
+      }
+    }
+    return injuries;
+  }
+
+  /* ================= Inventory ================= */
+  const EquipmentPool = {
+    clothing_body: (EquipPools.clothing_body || []),
+    clothing_hands: (EquipPools.clothing_hands || []),
+    mainHand: (EquipPools.mainHand || [])
+  };
+  const PackItems = (EquipPools.pack || []);
+  function generateEquipment() {
+    return {
+      currency: { credits: rollInt(0, 80) },
+      slots: {
+        head: null,
+        body: makeEquipEntry(pick(EquipmentPool.clothing_body)),
+        hands: makeEquipEntry(pick(EquipmentPool.clothing_hands)),
+        back: null, legs: null, feet: null
+      },
+      pack: PackItems.filter(() => chance(0.6)).map(p => {
+        const qty = rollInt(p.qty[0], p.qty[1]);
+        const item = { id: p.id, qty };
+        if (typeof p.durability === 'number') item.durability = p.durability;
+        return item;
+      }),
+      equipped: { mainHand: makeEquipEntry(pick(EquipmentPool.mainHand)), offHand: null }
+    };
+  }
+
+  /* ================= Schedules ================= */
+  function generateSchedule(occupationId) {
+    const home = pick(LocationPool.filter(l => l.startsWith('LOC_Apt'))) || 'LOC_Apt_1A';
+    const base = (SchedulesByOcc[occupationId] || []).map(b => clone(b));
+    if (!base.length) {
+      let workLoc = pick(LocationPool.filter(l => !l.startsWith('LOC_Apt')));
+      if (occupationId === 'paramedic' && LocationPool.includes('LOC_Clinic')) workLoc = 'LOC_Clinic';
+      base.push({ days: 'Mon-Fri', start: '09:00', end: '17:00', at: workLoc });
+    }
+    base.push({ days: 'Mon-Fri', start: '15:30', end: '18:00', at: pick(LocationPool) });
+    base.push({ days: '*', start: '22:30', end: '06:30', at: home });
+    return base;
+  }
+
+  /* ================= Relationships ================= */
+  function generateRelationshipSkeleton(pop) {
+    pop.forEach(n => { n.relationships = { family: [], romance: [], friends: [], rivals: [], byId: {} }; });
+    let pool = pop.slice();
+    while (pool.length) {
+      if (pool.length < 2) break;
+      const clusterSize = clamp(rollInt(2, 4), 2, pool.length);
+      const cluster = []; for (let i = 0; i < clusterSize; i++) { const idx = rollInt(0, pool.length - 1); cluster.push(pool.splice(idx, 1)[0]); }
+      cluster.forEach(a => cluster.forEach(b => { if (a !== b) { a.relationships.family.push(b.id); a.relationships.byId[b.id] = { opinion: rollInt(30, 70), tags: ['family'] }; } }));
+    }
+    for (let i = 0; i < pop.length; i++) for (let j = i + 1; j < pop.length; j++) {
+      if (chance(0.08)) {
+        const a = pop[i], b = pop[j];
+        a.relationships.friends.push(b.id); b.relationships.friends.push(a.id);
+        a.relationships.byId[b.id] = a.relationships.byId[b.id] || { opinion: rollInt(20, 60), tags: ['friend'] };
+        b.relationships.byId[a.id] = b.relationships.byId[a.id] || { opinion: rollInt(20, 60), tags: ['friend'] };
+      }
+    }
+  }
+
+  /* ================= Core NPC Assembly ================= */
+  function generateCoreNPC(index) {
+    const occ = pick(Occupations);
+    const traitPrimary = weightedPick(PersonalityTraits, occ.traitBias || []);
+    const secondaryBias = (occ.traitBias || []).filter(t => traitPrimary ? t !== traitPrimary.id : true);
+    const traitSecondary = weightedPick(PersonalityTraits, secondaryBias);
+    const tertPool = PersonalityTraits.filter(t => t !== traitPrimary && t !== traitSecondary);
+    const traitTertiary = chance(0.3) ? weightedPick(tertPool, []) : null;
+    const traits = [traitPrimary, traitSecondary, traitTertiary].filter(Boolean).map(t => t.id);
+
+    const base = clone(occ.base);
+    Object.keys(base).forEach(k => { base[k] = clamp(base[k] + rollInt(-1, 1), 1, 10); });
+    applyPersonalityMods(base, traits);
+
+    const injuries  = maybeGenerateInjuries();
+    const injuryMods = accumulateAfflictionAttrMods(injuries);
+
+    const attrMods = { STR:0, AGI:0, END:0, FOR:0, CHA:0, INT:0, WIS:0 };
+    for (const k in attrMods) attrMods[k] += (injuryMods[k] || 0);
+
+    const aEff = effectiveAttributes(base, attrMods);
+    const derived = computeDerived(aEff);
+    const inventory = generateEquipment();
+
+    const pronoun = pick(PronounSets).pronouns;
+    const genderIdentity = pick(Genders);
+    const fullName = (typeof setup.generateName === 'function') ? setup.generateName() : generateName();
+
+    const exposure = +setup.rng.rand().toFixed(2);
+    const resistance = +setup.rng.rand().toFixed(2);
+    const isEntropyAfflicted = exposure >= 0.05;
+
+    const npc = {
+      id: 'NPC_' + String(index).padStart(3, '0'),
+      version: SCHEMA_VERSION,
+      lifecycle: {
+        isAlive: true, isEntropyAfflicted, isPlayableHost: true, isDiscovered: false,
+        death: { cause: null, time: null, locationId: null }, hostHistory: { wasPlayer: false, incarnations: [] }
+      },
+      identity: {
+        fullName, alias: null, age: rollInt(18, 70), pronouns: pronoun, genderIdentity,
+        species: pick(Species), height_cm: rollInt(150, 200),
+        build: pick(['slim', 'average', 'stout', 'athletic']),
+        appearance: {
+          hair: pick(['black', 'brown', 'blonde', 'red', 'grey']) + ', ' + pick(['short', 'long', 'shoulder-length', 'cropped']),
+          eyes: pick(['brown', 'hazel', 'green', 'blue', 'grey']),
+          skin: pick(['light', 'medium', 'dark']),
+          distinguishingMarks: chance(0.3) ? [pick(['scar over brow', 'freckles', 'tattooed forearm', 'burned left hand'])] : []
+        },
+        portrait: { seed: null, style: 'painterly' }
+      },
+      background: {
+        originWard: pick(Wards),
+        occupation: occ.id,
+        factions: occ.factions ? occ.factions.slice() : [],
+        biography: '',
+        secrets: [],
+        reputation: { global: 0, byFaction: {} }
+      },
+      personality: {
+        archetype: occ.id,
+        traits,
+        big5: { O:+setup.rng.rand().toFixed(2), C:+setup.rng.rand().toFixed(2), E:+setup.rng.rand().toFixed(2), A:+setup.rng.rand().toFixed(2), N:+setup.rng.rand().toFixed(2) },
+        motivations: [], fears: []
+      },
+      attributes: Object.assign({}, base, { mods: attrMods }),
+      derived,
+      skills: { model: 'derived', cache: { ts: null, values: {} } },
+      conditions: {
+        vitals: { hp: Math.round(derived.hpMax * 0.6), bleeding: 0, pain: 0, fatigue: rollInt(0, 25), stress: rollInt(0, 30) },
+        bodymap: { head:{status:'ok'}, ears:{status:'ok'}, eyes:{status:'ok'}, neck:{status:'ok'}, torso:{status:'ok'}, genitals:{status:'ok'}, l_arm:{status:'ok'}, r_arm:{status:'ok'}, l_leg:{status:'ok'}, r_leg:{status:'ok'} },
+        afflictions: injuries, prosthetics: [], immunities: []
+      },
+      entropy: { exposure, resistance, resonances: [], fragmentsKnown: [] },
+      inventory,
+      relationships: { family: [], romance: [], friends: [], rivals: [], byId: {} },
+      knowledge: { mapPins: [], keys: [], rumors: [] },
+      behavior: {
+        schedule: generateSchedule(occ.id),
+        combatTactics: pick(['avoid_then_firstAid', 'cautious_retreat', 'stand_ground']),
+        dialogueStyle: pick([['soft-spoken', 'practical'], ['terse', 'guarded'], ['warm', 'chatty']])
+      },
+      flags: { questGiverIds: [], barksSeen: [], metPlayer: false, plotCritical: false, spawnLocked: false },
+      debug: { createdAt: setup.rng.nowISO(), seed: setup.rng.seed >>> 0 }
+    };
+    return npc;
+  }
+
+  /* ================= Population Pipeline ================= */
+  function generatePopulation(count) { const pop = []; for (let i = 0; i < count; i++) pop.push(generateCoreNPC(i + 1)); generateRelationshipSkeleton(pop); return pop; }
+
+  /* ================= Validation ================= */
+  function validateDetailed(npc) {
+    const errors = [];
+    if (!npc) { errors.push('NPC missing'); return errors; }
+    if (npc.version !== SCHEMA_VERSION) errors.push(`Version mismatch: ${npc.version} != ${SCHEMA_VERSION}`);
+    if (!(Species || []).includes(npc.identity?.species)) errors.push(`Invalid species: ${npc.identity?.species}`);
+    if (!(Wards || []).includes(npc.background?.originWard)) errors.push(`Invalid ward: ${npc.background?.originWard}`);
+    for (const k of ['STR','AGI','END','FOR','CHA','INT','WIS']) { const v = npc.attributes?.[k]; if (typeof v !== 'number' || v < 1 || v > 12) errors.push(`Attr ${k} out of range: ${v}`); }
+    const allowedStatus = new Set(Enums.bodyStatus || ['ok']);
+    for (const part in npc.conditions?.bodymap || {}) { const st = npc.conditions.bodymap[part]?.status; if (!allowedStatus.has(st)) errors.push(`Body status invalid for ${part}: ${st}`); }
+    if (!npc.inventory || typeof npc.inventory !== 'object') errors.push('Inventory missing');
+    if (!npc.inventory.slots) errors.push('Inventory.slots missing');
+    return errors;
+  }
+
+  /* ================= Public API ================= */
+  setup.NPC = {
+    SCHEMA_VERSION,
+    reseed(seed) { if (setup.rng && setup.rng.reseed) setup.rng.reseed(seed); },
+    generateOne: generateCoreNPC,
+    generatePopulation,
+    validate(npc) { return validateDetailed(npc).length === 0; },
+    validateDetailed,
+    migrate(npc) { if (npc.version === 1) return npc; return npc; }
+  };
+
+})();
+
+/* ---- Optional shape-checker (unchanged) ---- */
 (function(){
-  // Paste your sample object here without comments, or construct its shape:
   const sampleShape = {
     id:"", version:0,
     lifecycle:{ isAlive:true, isEntropyAfflicted:true, isPlayableHost:true, isDiscovered:true,
@@ -234,27 +867,16 @@ body {
     flags:{ questGiverIds:[], barksSeen:[], metPlayer:false, plotCritical:false, spawnLocked:false },
     debug:{ createdAt:"", seed:0 }
   };
-
   function shapeMatch(sample, obj, path="root", errs=[]) {
     for (const k of Object.keys(sample)) {
-      const sp = sample[k], op = obj?.[k];
-      const pth = path + "." + k;
-      if (sp === null || typeof sp !== "object" || Array.isArray(sp)) {
-        if (typeof op === "undefined") errs.push("Missing key: " + pth);
-      } else {
-        if (typeof op !== "object") errs.push("Missing/invalid object: " + pth);
-        else shapeMatch(sp, op, pth, errs);
-      }
+      const sp = sample[k], op = obj?.[k], pth = path + "." + k;
+      if (sp === null || typeof sp !== "object" || Array.isArray(sp)) { if (typeof op === "undefined") errs.push("Missing key: " + pth); }
+      else { if (typeof op !== "object") errs.push("Missing/invalid object: " + pth); else shapeMatch(sp, op, pth, errs); }
     }
     return errs;
   }
-
-  // Run the shape check after the story is ready, without reseeding the global RNG.
   $(document).one(':storyready', function() {
-    if (!setup.NPC || !setup.NPC.generatePopulation) {
-      console.warn('[shape-check] NPC module not available; skipping');
-      return;
-    }
+    if (!setup.NPC || !setup.NPC.generatePopulation) { console.warn('[shape-check] NPC module not available; skipping'); return; }
     const pop = setup.NPC.generatePopulation(200);
     let bad = 0;
     for (const n of pop) {
@@ -265,468 +887,7 @@ body {
     else console.warn(bad + " NPCs had shape differences. See console.");
   });
 })();
-/* twine-user-script #3: "npc.js" */
-/* Rich NPC generation system for Cycles of Decay (SugarCube)
- * Iteration 2: Deterministic RNG, seeded time, safe trait picks, affliction->attr mods,
- * occupation schedules, enums, validation, deterministic names.
- */
-(function () {
-  'use strict';
-  if (!window.setup) window.setup = {};
-
-  /* ================= Seeded RNG (Mulberry32) & helpers ================= */
-  function hashString(str) { // FNV-1a-ish 32-bit
-    let h = 2166136261 >>> 0;
-    for (let i = 0; i < str.length; i++) {
-      h ^= str.charCodeAt(i);
-      h = Math.imul(h, 16777619);
-    }
-    return h >>> 0;
-  }
-
-  function makeRNG(seedInit) {
-    let s = (typeof seedInit === 'string' ? hashString(seedInit) : (seedInit >>> 0)) || 0xC0FFEE;
-    let ticks = 0;
-    const epoch = 1700000000000; // fixed epoch for deterministic clock
-
-    function mulberry32() {
-      s += 0x6D2B79F5;
-      let t = Math.imul(s ^ (s >>> 15), 1 | s);
-      t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296; // [0,1)
-    }
-    const api = {
-      get seed() { return s >>> 0; },
-      rand() { return mulberry32(); }, // [0,1)
-      rollInt(min, max) { return Math.floor(api.rand() * (max - min + 1)) + min; }, // inclusive
-      rollFloat(min, max) { return api.rand() * (max - min) + min; },
-      chance(p) { return api.rand() < p; },
-      pick(arr) { return arr[Math.floor(api.rand() * arr.length)]; },
-      nowISO() { return new Date(epoch + (ticks++) * 137).toISOString(); },
-      reseed(n) { s = (typeof n === 'string' ? hashString(n) : (n >>> 0)); ticks = 0; }
-    };
-    return api;
-  }
-
-  // Install RNG if missing or extend existing with required methods
-  if (!setup.rng || typeof setup.rng.rand !== 'function') {
-    setup.rng = makeRNG(0xC0FFEE);
-  } else {
-    // Ensure required helpers exist
-    const r = setup.rng;
-    if (!r.rollInt) r.rollInt = (min, max) => Math.floor(r.rand() * (max - min + 1)) + min;
-    if (!r.rollFloat) r.rollFloat = (min, max) => r.rand() * (max - min) + min;
-    if (!r.chance) r.chance = p => r.rand() < p;
-    if (!r.pick) r.pick = arr => arr[Math.floor(r.rand() * arr.length)];
-    if (!r.nowISO) {
-      let ticks = 0, epoch = 1700000000000;
-      r.nowISO = () => new Date(epoch + (ticks++) * 137).toISOString();
-    }
-    if (!r.reseed) r.reseed = n => void 0; // no-op if user provided their own
-  }
-
-  /* ================= Small utils ================= */
-  const clone = (obj) => JSON.parse(JSON.stringify(obj));
-  const clamp = (v, lo, hi) => (v < lo ? lo : (v > hi ? hi : v));
-  const pick = (a) => setup.rng.pick(a);
-  const rollInt = (a, b) => setup.rng.rollInt(a, b);
-  const rollFloat = (a, b) => setup.rng.rollFloat(a, b);
-  const chance = (p) => setup.rng.chance(p);
-
-  /* ================= Enums & Data Pools ================= */
-  setup.enums = setup.enums || {};
-  setup.enums.bodyStatus = ['ok', 'injured', 'missing', 'prosthetic', 'scarred'];
-  setup.enums.species = ['human'];
-  setup.enums.genders = ['female', 'male', 'nonbinary'];
-  setup.enums.pronouns = ['she/her', 'he/him', 'they/them'];
-  setup.enums.wards = ['Lower_Riverside_District', 'Old_Docks', 'Market_Row', 'Hill_Side'];
-
-  const Species = setup.enums.species;
-  const Genders = setup.enums.genders;
-  const PronounSets = setup.enums.pronouns.map(p => ({ pronouns: p }));
-
-  // Simple deterministic name generator (seeded)
-  const FirstNames = ['Mara', 'Elijah', 'Rowan', 'Iris', 'Caleb', 'Nadia', 'Jonah', 'Selene', 'Felix', 'Anya', 'Micah', 'Kira'];
-  const LastNames = ['Delaney', 'Harper', 'Voss', 'Kline', 'Ramos', 'Okoye', 'Nakamura', 'Santos', 'Bishop', 'Singh', 'Morozov', 'Yang'];
-  function generateName() {
-    return pick(FirstNames) + ' ' + pick(LastNames);
-  }
-
-  // Occupational archetypes (baseline attributes & biases)
-  const Occupations = [
-    { id: 'paramedic', weights: {}, base: { STR: 4, AGI: 5, END: 6, FOR: 7, CHA: 6, INT: 5, WIS: 6 }, traitBias: ['empathetic', 'methodical'], factions: ['FAC_TownClinic'] },
-    { id: 'laborer', weights: {}, base: { STR: 6, AGI: 5, END: 6, FOR: 5, CHA: 4, INT: 4, WIS: 4 }, traitBias: ['resilient', 'dogged'] },
-    { id: 'scribe', weights: {}, base: { STR: 3, AGI: 4, END: 4, FOR: 4, CHA: 5, INT: 7, WIS: 6 }, traitBias: ['observant', 'anxious'] },
-    { id: 'scavenger', weights: {}, base: { STR: 5, AGI: 6, END: 5, FOR: 5, CHA: 4, INT: 5, WIS: 5 }, traitBias: ['observant', 'dogged'] },
-    { id: 'vendor', weights: {}, base: { STR: 4, AGI: 4, END: 5, FOR: 4, CHA: 7, INT: 5, WIS: 5 }, traitBias: ['charismatic', 'methodical'] },
-    { id: 'vagrant', weights: {}, base: { STR: 4, AGI: 5, END: 5, FOR: 5, CHA: 3, INT: 4, WIS: 5 }, traitBias: ['frail', 'stoic'] }
-  ];
-
-  // Personality traits (lightweight; map tags->modifiers in game logic)
-  const PersonalityTraits = [
-    { id: 'empathetic', tags: ['social', 'care'], mods: { CHA: +1 }, weights: {} },
-    { id: 'methodical', tags: ['order'], mods: { INT: +1 }, weights: {} },
-    { id: 'risk-averse', tags: ['caution'], mods: {}, weights: {} },
-    { id: 'resilient', tags: ['tough'], mods: { END: +1, FOR: +1 }, weights: {} },
-    { id: 'frail', tags: ['tough'], mods: { END: -1 }, weights: {} },
-    { id: 'observant', tags: ['perception'], mods: { WIS: +1 }, weights: {} },
-    { id: 'oblivious', tags: ['perception'], mods: { WIS: -1 }, weights: {} },
-    { id: 'dogged', tags: ['will'], mods: { FOR: +1 }, weights: {} },
-    { id: 'anxious', tags: ['will'], mods: { FOR: -1 }, weights: {} },
-    { id: 'stoic', tags: ['will'], mods: { CHA: -1, FOR: +1 }, weights: {} },
-    { id: 'charismatic', tags: ['social'], mods: { CHA: +1 }, weights: {} }
-  ];
-
-  // Injury / affliction templates
-  const InjuryCatalog = [
-    { id: 'sprained_ankle', location: 'l_leg', severityRange: [0.2, 0.6], mods: { AGI: -1, move_mult: 0.8 }, tags: ['injury', 'mobility'], defaultTreat: ['rest', 'wrap', 'painkiller'] },
-    { id: 'fractured_wrist', location: 'r_arm', severityRange: [0.3, 0.7], mods: { AGI: -1, STR: -1, melee_pct: -0.2 }, tags: ['injury', 'dexterity'], defaultTreat: ['splint', 'rest'] },
-    { id: 'concussion_mild', location: 'head', severityRange: [0.1, 0.3], mods: { INT: -1, WIS: -1, awareness_pct: -0.1 }, tags: ['injury', 'cognitive'], defaultTreat: ['rest', 'dark_room'] }
-  ];
-
-  // Equipment pools (simplified)
-  const EquipmentPool = {
-    clothing_body: [{ id: 'itm_paramedic_vest', durability: 0.8 }, { id: 'itm_worn_jacket', durability: 0.5 }, null],
-    clothing_hands: [{ id: 'itm_work_gloves', durability: 0.7 }, null],
-    mainHand: [{ id: 'itm_rescue_shears', durability: 0.9 }, { id: 'itm_pocket_knife', durability: 0.6 }, null]
-  };
-
-  const PackItems = [
-    { id: 'itm_bandage', qty: [1, 5] },
-    { id: 'itm_painkiller_tabs', qty: [1, 3] },
-    { id: 'itm_water_bottle', qty: [1, 1] },
-    { id: 'itm_energy_bar', qty: [1, 4] },
-    { id: 'itm_flashlight', qty: [1, 1], durability: 0.6 }
-  ];
-
-  // Locations & Occupation-driven schedule patterns
-  const LocationPool = ['LOC_Clinic', 'LOC_Riverside', 'LOC_AshSpire_Perimeter', 'LOC_Grocery', 'LOC_Apt_1A', 'LOC_Apt_2B'];
-  const OccupationSchedules = {
-    paramedic: [{ days: 'Mon-Fri', start: '07:00', end: '15:00', at: 'LOC_Clinic' }],
-    laborer: [{ days: 'Mon-Fri', start: '06:00', end: '14:00', at: 'LOC_Docks' }],
-    scribe: [{ days: 'Mon-Fri', start: '09:00', end: '17:00', at: 'LOC_Hall' }],
-    scavenger: [{ days: 'Mon-Sat', start: '08:00', end: '13:00', at: 'LOC_Riverside' }],
-    vendor: [{ days: 'Mon-Sat', start: '10:00', end: '18:00', at: 'LOC_Market' }],
-    vagrant: [{ days: '*', start: '00:00', end: '23:59', at: 'LOC_AshSpire_Perimeter' }]
-  };
-
-  /* ================= Weighted pick (bias-aware) ================= */
-  function weightedPick(list, biasIds) {
-    if (!list || !list.length) return undefined;
-    const pool = [];
-    list.forEach(item => {
-      const id = (item && item.id) ? item.id : item;
-      let w = 1;
-      if (biasIds && id && biasIds.includes(id)) w += 2;
-      for (let i = 0; i < w; i++) pool.push(item);
-    });
-    return pick(pool);
-  }
-
-  /* ================= Attributes / Mods ================= */
-  function applyPersonalityMods(attrs, traits) {
-    traits.forEach(tid => {
-      const def = PersonalityTraits.find(t => t.id === tid);
-      if (def && def.mods) {
-        Object.keys(def.mods).forEach(k => { attrs[k] = (attrs[k] || 0) + def.mods[k]; });
-      }
-    });
-  }
-
-  function accumulateAfflictionAttrMods(afflictions) {
-    const mods = { STR: 0, AGI: 0, END: 0, FOR: 0, CHA: 0, INT: 0, WIS: 0 };
-    (afflictions || []).forEach(a => {
-      if (!a || !a.mods) return;
-      for (const k of Object.keys(mods)) {
-        if (typeof a.mods[k] === 'number') mods[k] += a.mods[k];
-      }
-    });
-    return mods;
-  }
-
-  function effectiveAttributes(base, extraMods) {
-    const eff = {};
-    for (const k of ['STR', 'AGI', 'END', 'FOR', 'CHA', 'INT', 'WIS']) {
-      eff[k] = clamp((base[k] || 0) + (extraMods?.[k] || 0), 1, 12);
-    }
-    return eff;
-  }
-
-  function computeDerived(aEff) {
-    return {
-      hpMax: Math.round(10 + aEff.END * 1.5 + aEff.FOR * 1.5),
-      staminaMax: Math.round(30 + aEff.END * 2 + aEff.AGI * 2),
-      carryCap: Math.round(10 + aEff.STR * 4 + aEff.END * 1),
-      moveSpeed: +(3 + aEff.AGI * 0.3).toFixed(2),
-      initiative: aEff.AGI + aEff.WIS + rollInt(1, 6),
-      perception: Math.round(40 + aEff.WIS * 3 + aEff.INT * 1),
-      resistPain: Math.round(30 + aEff.FOR * 3 + aEff.END * 2),
-      resistFear: Math.round(30 + aEff.FOR * 3 + aEff.WIS * 2),
-      resistDisease: Math.round(20 + aEff.END * 3 + aEff.WIS * 1),
-      critChance: +(0.05 + (aEff.AGI + aEff.WIS) / 400).toFixed(3)
-    };
-  }
-
-  /* ================= Injuries ================= */
-  function maybeGenerateInjuries() {
-    const injuries = [];
-    if (chance(0.25)) { // 25%: at least one injury
-      const count = chance(0.6) ? 1 : 2;
-      for (let i = 0; i < count; i++) {
-        const tmpl = pick(InjuryCatalog);
-        if (!tmpl) continue;
-        const severity = +rollFloat(tmpl.severityRange[0], tmpl.severityRange[1]).toFixed(2);
-        injuries.push({
-          id: tmpl.id,
-          location: tmpl.location,
-          onset: setup.rng.nowISO(),
-          severity,
-          tags: tmpl.tags.slice(),
-          mods: clone(tmpl.mods),
-          treatment: tmpl.defaultTreat.slice()
-        });
-      }
-    }
-    return injuries;
-  }
-
-  /* ================= Inventory ================= */
-  function generateEquipment() {
-    return {
-      currency: { credits: rollInt(0, 80) },
-      slots: {
-        head: null,
-        body: clone(pick(EquipmentPool.clothing_body)),
-        hands: clone(pick(EquipmentPool.clothing_hands)),
-        back: null,
-        legs: null,
-        feet: null
-      },
-      pack: PackItems
-        .filter(() => chance(0.6))
-        .map(p => {
-          const qty = rollInt(p.qty[0], p.qty[1]);
-          const item = { id: p.id, qty };
-          if (p.durability) item.durability = p.durability;
-          return item;
-        }),
-      equipped: {
-        mainHand: clone(pick(EquipmentPool.mainHand)),
-        offHand: null
-      }
-    };
-  }
-
-  /* ================= Schedules ================= */
-  function generateSchedule(occupationId) {
-    const home = pick(LocationPool.filter(l => l.startsWith('LOC_Apt'))) || 'LOC_Apt_1A';
-    const base = OccupationSchedules[occupationId] || [{ days: 'Mon-Fri', start: '09:00', end: '17:00', at: pick(LocationPool.filter(l => !l.startsWith('LOC_Apt'))) }];
-    const errandAt = pick(LocationPool);
-    return [
-      ...base,
-      { days: 'Mon-Fri', start: '15:30', end: '18:00', at: errandAt },
-      { days: '*', start: '22:30', end: '06:30', at: home }
-    ];
-  }
-
-  /* ================= Relationships ================= */
-  function generateRelationshipSkeleton(pop) {
-    // Reset
-    pop.forEach(n => { n.relationships = { family: [], romance: [], friends: [], rivals: [], byId: {} }; });
-
-    // Family clusters (size 2–4)
-    let pool = pop.slice();
-    while (pool.length) {
-      if (pool.length < 2) break;
-      const clusterSize = clamp(rollInt(2, 4), 2, pool.length);
-      const cluster = [];
-      for (let i = 0; i < clusterSize; i++) {
-        const idx = rollInt(0, pool.length - 1);
-        cluster.push(pool.splice(idx, 1)[0]);
-      }
-      cluster.forEach(a => {
-        cluster.forEach(b => {
-          if (a !== b) {
-            a.relationships.family.push(b.id);
-            a.relationships.byId[b.id] = { opinion: rollInt(30, 70), tags: ['family'] };
-          }
-        });
-      });
-    }
-
-    // Friendships (symmetric; ~8% chance per unordered pair)
-    for (let i = 0; i < pop.length; i++) {
-      for (let j = i + 1; j < pop.length; j++) {
-        if (chance(0.08)) {
-          const a = pop[i], b = pop[j];
-          a.relationships.friends.push(b.id); b.relationships.friends.push(a.id);
-          a.relationships.byId[b.id] = a.relationships.byId[b.id] || { opinion: rollInt(20, 60), tags: ['friend'] };
-          b.relationships.byId[a.id] = b.relationships.byId[a.id] || { opinion: rollInt(20, 60), tags: ['friend'] };
-        }
-      }
-    }
-  }
-
-/* ================= Core NPC Assembly ================= */
-	function generateCoreNPC(index) {
-	const occ = pick(Occupations);
-	const traitPrimary = weightedPick(PersonalityTraits, occ.traitBias || []);
-	const secondaryBias = (occ.traitBias || []).filter(t => traitPrimary ? t !== traitPrimary.id : true);
-	const traitSecondary = weightedPick(PersonalityTraits, secondaryBias);
-	const tertPool = PersonalityTraits.filter(t => t !== traitPrimary && t !== traitSecondary);
-	const traitTertiary = chance(0.3) ? weightedPick(tertPool, []) : null;
-	const traits = [traitPrimary, traitSecondary, traitTertiary].filter(Boolean).map(t => t.id);
-
-	// Base attributes (copy & jitter ±1)
-	const base = clone(occ.base);
-	Object.keys(base).forEach(k => { base[k] = clamp(base[k] + rollInt(-1, 1), 1, 10); });
-	applyPersonalityMods(base, traits);
-
-	// Injuries before derived => their mods affect play immediately
-	const injuries = maybeGenerateInjuries();
-	const injuryMods = accumulateAfflictionAttrMods(injuries);
-
-	const attrMods = { STR: 0, AGI: 0, END: 0, FOR: 0, CHA: 0, INT: 0, WIS: 0 };
-	// Merge injury mods into attribute mods
-	for (const k in attrMods) attrMods[k] += (injuryMods[k] || 0);
-
-	const aEff = effectiveAttributes(base, attrMods);
-	const derived = computeDerived(aEff);
-	const inventory = generateEquipment();
-
-	// Identity (deterministic)
-	const pronoun = pick(PronounSets).pronouns;
-	const genderIdentity = pick(Genders);
-	const fullName = (typeof setup.generateName === 'function') ? setup.generateName() : generateName();
-
-	// Entropy block (deterministic), flag derived from exposure threshold
-	const exposure = +setup.rng.rand().toFixed(2);
-	const resistance = +setup.rng.rand().toFixed(2);
-	const isEntropyAfflicted = exposure >= 0.05;
-
-	const npc = {
-		id: 'NPC_' + index.toString(36),
-		version: SCHEMA_VERSION,
-		lifecycle: {
-		isAlive: true,
-		isEntropyAfflicted,
-		isPlayableHost: true,
-		isDiscovered: false,
-		death: { cause: null, time: null, locationId: null },
-		hostHistory: { wasPlayer: false, incarnations: [] }
-		},
-		identity: {
-		fullName, alias: null, age: rollInt(18, 70), pronouns: pronoun, genderIdentity,
-		species: pick(Species), height_cm: rollInt(150, 200),
-		build: pick(['slim', 'average', 'stout', 'athletic']),
-		appearance: {
-			hair: pick(['black', 'brown', 'blonde', 'red', 'grey']) + ', ' + pick(['short', 'long', 'shoulder-length', 'cropped']),
-			eyes: pick(['brown', 'hazel', 'green', 'blue', 'grey']),
-			skin: pick(['light', 'medium', 'dark']),
-			distinguishingMarks: chance(0.3) ? [pick(['scar over brow', 'freckles', 'tattooed forearm', 'burned left hand'])] : []
-		},
-		portrait: { seed: null, style: 'painterly' }
-		},
-		background: {
-		originWard: pick(setup.enums.wards),
-		occupation: occ.id,
-		factions: occ.factions ? occ.factions.slice() : [],
-		biography: '',
-		secrets: [],
-		reputation: { global: 0, byFaction: {} }
-		},
-		personality: {
-		archetype: occ.id,
-		traits,
-		big5: {
-			O: +setup.rng.rand().toFixed(2),
-			C: +setup.rng.rand().toFixed(2),
-			E: +setup.rng.rand().toFixed(2),
-			A: +setup.rng.rand().toFixed(2),
-			N: +setup.rng.rand().toFixed(2)
-		},
-		motivations: [],
-		fears: []
-		},
-		attributes: Object.assign({}, base, { mods: attrMods }),
-		derived,
-		skills: { model: 'derived', cache: { ts: null, values: {} } },
-		conditions: {
-		vitals: { hp: Math.round(derived.hpMax * 0.6), bleeding: 0, pain: 0, fatigue: rollInt(0, 25), stress: rollInt(0, 30) },
-		bodymap: {
-			head: { status: 'ok' }, ears: { status: 'ok' }, eyes: { status: 'ok' }, neck: { status: 'ok' },
-			torso: { status: 'ok' }, genitals: { status: 'ok' },
-			l_arm: { status: 'ok' }, r_arm: { status: 'ok' }, l_leg: { status: 'ok' }, r_leg: { status: 'ok' }
-		},
-		afflictions: injuries,
-		prosthetics: [],
-		immunities: []
-		},
-		entropy: { exposure, resistance, resonances: [], fragmentsKnown: [] },
-		inventory,
-		relationships: { family: [], romance: [], friends: [], rivals: [], byId: {} },
-		knowledge: { mapPins: [], keys: [], rumors: [] },
-		behavior: {
-		schedule: generateSchedule(occ.id),
-		combatTactics: pick(['avoid_then_firstAid', 'cautious_retreat', 'stand_ground']),
-		dialogueStyle: pick([['soft-spoken', 'practical'], ['terse', 'guarded'], ['warm', 'chatty']])
-		},
-		flags: { questGiverIds: [], barksSeen: [], metPlayer: false, plotCritical: false, spawnLocked: false },
-		debug: { createdAt: setup.rng.nowISO(), seed: setup.rng.seed >>> 0 }
-	};
-	return npc;
-}
-
-  /* ================= Population Pipeline ================= */
-  function generatePopulation(count) {
-    const pop = [];
-    for (let i = 0; i < count; i++) pop.push(generateCoreNPC(i + 1));
-    generateRelationshipSkeleton(pop);
-    return pop;
-  }
-
-  /* ================= Validation ================= */
-  function validateDetailed(npc) {
-    const errors = [];
-    if (!npc) { errors.push('NPC missing'); return errors; }
-    if (npc.version !== SCHEMA_VERSION) errors.push(`Version mismatch: ${npc.version} != ${SCHEMA_VERSION}`);
-    if (!setup.enums.species.includes(npc.identity?.species)) errors.push(`Invalid species: ${npc.identity?.species}`);
-    if (!setup.enums.wards.includes(npc.background?.originWard)) errors.push(`Invalid ward: ${npc.background?.originWard}`);
-
-    // Attributes
-    for (const k of ['STR', 'AGI', 'END', 'FOR', 'CHA', 'INT', 'WIS']) {
-      const v = npc.attributes?.[k];
-      if (typeof v !== 'number' || v < 1 || v > 12) errors.push(`Attr ${k} out of range: ${v}`);
-    }
-    // Body status
-    const allowedStatus = new Set(setup.enums.bodyStatus);
-    for (const part in npc.conditions?.bodymap || {}) {
-      const st = npc.conditions.bodymap[part]?.status;
-      if (!allowedStatus.has(st)) errors.push(`Body status invalid for ${part}: ${st}`);
-    }
-    // Inventory shape (light checks)
-    if (!npc.inventory || typeof npc.inventory !== 'object') errors.push('Inventory missing');
-    if (!npc.inventory.slots) errors.push('Inventory.slots missing');
-    return errors;
-  }
-
-  /* ================= Public API ================= */
-  setup.NPC = {
-    SCHEMA_VERSION: 1,
-    reseed(seed) { if (setup.rng && setup.rng.reseed) setup.rng.reseed(seed); },
-    generateOne: generateCoreNPC,
-    generatePopulation,
-    validate(npc) { return validateDetailed(npc).length === 0; },
-    validateDetailed,
-    migrate(npc) { // stub for future schema bumps
-      if (npc.version === 1) return npc;
-      // ... add transforms here per version
-      return npc;
-    }
-  };
-
-})();
-/* twine-user-script #4: "state.js" */
+/* twine-user-script #14: "state.js" */
 /* Procedural world + character generation scaffold for Cycles of Decay */
 (function(){
 	'use strict';
@@ -759,17 +920,48 @@ body {
 		};
 	}
 
-	setup.rng = {
-		seedString: null,
-		rand: Math.random,
-		reseed(str) {
-			this.seedString = str;
-			const seedGen = xmur3(str);
-			this.rand = sfc32(seedGen(), seedGen(), seedGen(), seedGen());
-		},
-		pick(arr) { return arr.length ? arr[Math.floor(this.rand()*arr.length)] : undefined; },
-		roll(min, max) { return Math.floor(this.rand()*(max - min + 1)) + min; }
-	};
+	// Respect an existing RNG (e.g., from npc.js), otherwise create one; in both cases ensure helpers exist.
+	(function ensureRng(){
+		const epoch = 1700000000000; // align with npc.js default
+		if (!setup.rng || typeof setup.rng.rand !== 'function') {
+			const seedString = 'cod-default';
+			const seedGen = xmur3(seedString);
+			const rng = sfc32(seedGen(), seedGen(), seedGen(), seedGen());
+			let ticks = 0;
+			setup.rng = {
+				seedString,
+				rand: rng,
+				reseed(str){
+					this.seedString = str;
+					const g = xmur3(str);
+					this.rand = sfc32(g(), g(), g(), g());
+					ticks = 0;
+				},
+				pick(arr){ return (arr && arr.length) ? arr[Math.floor(this.rand()*arr.length)] : undefined; },
+				roll(min, max){ return Math.floor(this.rand()*(max - min + 1)) + min; },
+				rollInt(min, max){ return Math.floor(this.rand()*(max - min + 1)) + min; },
+				rollFloat(min, max){ return this.rand()*(max - min) + min; },
+				chance(p){ return this.rand() < p; },
+				nowISO(){ return new Date(epoch + (ticks++) * 137).toISOString(); }
+			};
+		} else {
+			const r = setup.rng;
+			if (!r.pick) r.pick = arr => (arr && arr.length) ? arr[Math.floor(r.rand()*arr.length)] : undefined;
+			if (!r.roll && !r.rollInt) r.rollInt = (min,max) => Math.floor(r.rand()*(max - min + 1)) + min;
+			if (!r.rollFloat) r.rollFloat = (min,max) => r.rand()*(max - min) + min;
+			if (!r.chance) r.chance = p => r.rand() < p;
+			if (!r.nowISO) {
+				let ticks = 0; const ep = epoch;
+				r.nowISO = () => new Date(ep + (ticks++) * 137).toISOString();
+			}
+			if (!r.reseed) {
+				r.reseed = function(str){
+					const g = xmur3(String(str));
+					this.rand = sfc32(g(), g(), g(), g());
+				};
+			}
+		}
+	})();
 
 	/* ================= Trait & Archetype Definitions ================= */
 	setup.Traits = [
@@ -912,193 +1104,134 @@ body {
 	}
 })();
 
-/* twine-user-script #5: "StoryScript" */
+/* twine-user-script #15: "StoryScript" */
 /* Inline JavaScript (optional). Core scripts live in dev/js/*.js */
 /* Example: simple version log */
-console.log('StoryScript loaded: Cycles of Decay');</script><tw-passagedata pid="1" name="NPC Debug" tags="" position="100,100" size="100,100">&lt;&lt;set _ids = setup.npcIds()&gt;&gt;
-&lt;&lt;set _q = $npcDebugSearch or &quot;&quot;&gt;&gt;
-&lt;&lt;set _page = $npcDebugPage or 1&gt;&gt;
-&lt;&lt;set _pageSize = 50&gt;&gt; &lt;!-- tweak for 200+ --&gt;
+console.log('StoryScript loaded: Cycles of Decay');</script><tw-passagedata pid="1" name="NPC Debug" tags="nobr" position="100,100" size="100,100">&lt;&lt;if !State.variables.actors&gt;&gt;&lt;p&gt;&lt;em&gt;No NPC data in memory. Did you generate the population in StoryInit?&lt;/em&gt;&lt;/p&gt;&lt;&lt;return&gt;&gt;&lt;&lt;/if&gt;&gt;
+&lt;&lt;set _ids = setup.npcIds()&gt;&gt;&lt;&lt;set _q = ($npcDebugSearch || &quot;&quot;)&gt;&gt;&lt;&lt;set _page = ($npcDebugPage || 1)&gt;&gt;&lt;&lt;set _pageSize = 50&gt;&gt;
 
-&lt;div class=&quot;npc-toolbar&quot;&gt;
-  &lt;input class=&quot;npc-search&quot; type=&quot;text&quot; placeholder=&quot;Search id / name / occupation&quot; value=&quot;&lt;&lt;=_q&gt;&gt;&quot;
-         oninput=&quot;State.variables.npcDebugSearch = this.value; Engine.play(passage())&quot;&gt;
-  &lt;span&gt;Showing &lt;&lt;=_ids.length&gt;&gt; NPCs&lt;/span&gt;
-  &lt;&lt;link &quot;Clear search&quot;&gt;&gt;&lt;&lt;unset $npcDebugSearch&gt;&gt;&lt;&lt;run Engine.play(passage())&gt;&gt;&lt;&lt;/link&gt;&gt;
-&lt;/div&gt;
+&lt;div class=&quot;npc-toolbar&quot;&gt;&lt;&lt;textbox &quot;$npcDebugSearch&quot; &quot;Search id / name / occupation&quot; autofocus&gt;&gt; &lt;span&gt;Showing &lt;&lt;= _ids.length &gt;&gt; NPCs&lt;/span&gt; &amp;nbsp;|&amp;nbsp; &lt;&lt;link &quot;Apply&quot;&gt;&gt;&lt;&lt;goto &quot;NPC Debug&quot;&gt;&gt;&lt;&lt;/link&gt;&gt; &amp;nbsp;|&amp;nbsp; &lt;&lt;link &quot;Clear search&quot;&gt;&gt;&lt;&lt;unset $npcDebugSearch&gt;&gt;&lt;&lt;unset $npcDebugPage&gt;&gt;&lt;&lt;goto &quot;NPC Debug&quot;&gt;&gt;&lt;&lt;/link&gt;&gt;&lt;/div&gt;
 
-&lt;&lt;set _filtered = []&gt;&gt;
-&lt;&lt;for _i to 0; _i lt _ids.length; _i++&gt;&gt;
-  &lt;&lt;set _n = setup.getNPC(_ids[_i])&gt;&gt;
-  &lt;&lt;if _n and setup.filterNpc(_n, _q)&gt;&gt;
-    &lt;&lt;set _filtered.push(_n)&gt;&gt;
-  &lt;&lt;/if&gt;&gt;
-&lt;&lt;/for&gt;&gt;
-
-&lt;&lt;set _pages = Math.max(1, Math.ceil(_filtered.length / _pageSize))&gt;&gt;
-&lt;&lt;set _page = Math.min(_page, _pages)&gt;&gt;
-&lt;&lt;set _start = (_page - 1) * _pageSize&gt;&gt;
-&lt;&lt;set _slice = _filtered.slice(_start, _start + _pageSize)&gt;&gt;
+&lt;&lt;set _filtered = []&gt;&gt;&lt;&lt;for _i = 0; _i &lt; _ids.length; _i += 1&gt;&gt;&lt;&lt;set _n = setup.getNPC(_ids[_i])&gt;&gt;&lt;&lt;if _n and setup.filterNpc(_n, _q)&gt;&gt;&lt;&lt;run _filtered.push(_n)&gt;&gt;&lt;&lt;/if&gt;&gt;&lt;&lt;/for&gt;&gt;
+&lt;&lt;set _pages = Math.max(1, Math.ceil(_filtered.length / _pageSize))&gt;&gt;&lt;&lt;set _page = Math.min(_page, _pages)&gt;&gt;&lt;&lt;set _start = (_page - 1) * _pageSize&gt;&gt;&lt;&lt;set _slice = _filtered.slice(_start, _start + _pageSize)&gt;&gt;
 
 &lt;div class=&quot;npc-grid&quot;&gt;
-  &lt;div class=&quot;hdr&quot;&gt;NPC ID&lt;/div&gt;
-  &lt;div class=&quot;hdr&quot;&gt;Name&lt;/div&gt;
-  &lt;div class=&quot;hdr&quot;&gt;Age&lt;/div&gt;
-  &lt;div class=&quot;hdr&quot;&gt;Occupation&lt;/div&gt;
-  &lt;div class=&quot;hdr&quot;&gt;Alive&lt;/div&gt;
-  &lt;div class=&quot;hdr&quot;&gt;Entropy&lt;/div&gt;
-
-  &lt;&lt;for _n range _slice&gt;&gt;
-    &lt;&lt;set _alive = _n.lifecycle.isAlive&gt;&gt;
-    &lt;&lt;set _ent = _n.entropy?.exposure or 0&gt;&gt;
-    &lt;div class=&quot;npc-row&quot;&gt;
-      &lt;&lt;link _n.id&gt;&gt;&lt;&lt;set $inspectedNPC = _n.id&gt;&gt;&lt;&lt;goto &quot;NPC Inspector&quot;&gt;&gt;&lt;&lt;/link&gt;&gt;
-    &lt;/div&gt;
-    &lt;div class=&quot;npc-row&quot;&gt;&lt;&lt;=_n.identity.fullName&gt;&gt;&lt;/div&gt;
-    &lt;div class=&quot;npc-row&quot;&gt;&lt;&lt;=_n.identity.age&gt;&gt;&lt;/div&gt;
-    &lt;div class=&quot;npc-row&quot;&gt;&lt;&lt;=_n.background.occupation&gt;&gt;&lt;/div&gt;
-    &lt;div class=&quot;npc-row&quot;&gt;&lt;span class=&quot;npc-pill &lt;&lt;= _alive ? &#39;alive&#39; : &#39;dead&#39;&gt;&gt;&lt;&lt;= _alive ? &#39;Alive&#39; : &#39;Dead&#39;&gt;&gt;&lt;/span&gt;&lt;/div&gt;
-    &lt;div class=&quot;npc-row&quot;&gt;&lt;span class=&quot;npc-pill entropy&quot;&gt;&lt;&lt;= (_ent * 100).toFixed(0) &gt;&gt;%&lt;/span&gt;&lt;/div&gt;
+  &lt;div class=&quot;hdr&quot;&gt;NPC ID&lt;/div&gt;&lt;div class=&quot;hdr&quot;&gt;Name&lt;/div&gt;&lt;div class=&quot;hdr&quot;&gt;Age&lt;/div&gt;&lt;div class=&quot;hdr&quot;&gt;Occupation&lt;/div&gt;&lt;div class=&quot;hdr&quot;&gt;Alive&lt;/div&gt;&lt;div class=&quot;hdr&quot;&gt;Entropy&lt;/div&gt;
+  &lt;&lt;for _j = 0; _j &lt; _slice.length; _j += 1&gt;&gt;&lt;&lt;set _n = _slice[_j]&gt;&gt;&lt;&lt;set _alive = _n.lifecycle.isAlive&gt;&gt;&lt;&lt;set _ent = (_n.entropy &amp;&amp; _n.entropy.exposure) || 0&gt;&gt;
+  &lt;div class=&quot;npc-row&quot;&gt;&lt;&lt;link _n.id&gt;&gt;&lt;&lt;set $inspectedNPC = _n.id&gt;&gt;&lt;&lt;goto &quot;NPC Inspector&quot;&gt;&gt;&lt;&lt;/link&gt;&gt;&lt;/div&gt;
+  &lt;div class=&quot;npc-row&quot;&gt;&lt;&lt;= _n.identity.fullName &gt;&gt;&lt;/div&gt;
+  &lt;div class=&quot;npc-row&quot;&gt;&lt;&lt;= _n.identity.age &gt;&gt;&lt;/div&gt;
+  &lt;div class=&quot;npc-row&quot;&gt;&lt;&lt;= _n.background.occupation &gt;&gt;&lt;/div&gt;
+  &lt;div class=&quot;npc-row&quot;&gt;&lt;span class=&quot;npc-pill &lt;&lt;= _alive ? &#39;alive&#39; : &#39;dead&#39; &gt;&gt;&quot;&gt;&lt;&lt;= _alive ? &#39;Alive&#39; : &#39;Dead&#39; &gt;&gt;&lt;/span&gt;&lt;/div&gt;
+  &lt;div class=&quot;npc-row&quot;&gt;&lt;span class=&quot;npc-pill entropy&quot;&gt;&lt;&lt;= Math.round(_ent * 100) &gt;&gt;%&lt;/span&gt;&lt;/div&gt;
   &lt;&lt;/for&gt;&gt;
 &lt;/div&gt;
 
-&lt;!-- Pagination --&gt;
 &lt;div style=&quot;margin-top:10px;&quot;&gt;
   &lt;&lt;if _pages &gt; 1&gt;&gt;
     &lt;&lt;if _page &gt; 1&gt;&gt;&lt;&lt;link &quot;Prev&quot;&gt;&gt;&lt;&lt;set $npcDebugPage = _page - 1&gt;&gt;&lt;&lt;goto &quot;NPC Debug&quot;&gt;&gt;&lt;&lt;/link&gt;&gt;&lt;&lt;/if&gt;&gt;
     &lt;span&gt; Page &lt;&lt;= _page &gt;&gt; / &lt;&lt;= _pages &gt;&gt; &lt;/span&gt;
     &lt;&lt;if _page &lt; _pages&gt;&gt;&lt;&lt;link &quot;Next&quot;&gt;&gt;&lt;&lt;set $npcDebugPage = _page + 1&gt;&gt;&lt;&lt;goto &quot;NPC Debug&quot;&gt;&gt;&lt;&lt;/link&gt;&gt;&lt;&lt;/if&gt;&gt;
   &lt;&lt;/if&gt;&gt;
-&lt;/div&gt;</tw-passagedata><tw-passagedata pid="2" name="NPC Inspector" tags="" position="225,100" size="100,100">&lt;&lt;if !$inspectedNPC&gt;&gt;
-  &lt;p&gt;No NPC selected. Return to &lt;&lt;link &quot;NPC Debug&quot;&gt;&gt;&lt;&lt;goto &quot;NPC Debug&quot;&gt;&gt;&lt;&lt;/link&gt;&gt;&lt;/p&gt;
-  &lt;&lt;return&gt;&gt;
-&lt;&lt;/if&gt;&gt;
-
+&lt;/div&gt;</tw-passagedata><tw-passagedata pid="2" name="NPC Inspector" tags="nobr" position="225,100" size="100,100">&lt;&lt;if !$inspectedNPC&gt;&gt;&lt;p&gt;No NPC selected. &lt;&lt;link &quot;Back to NPC Debug&quot;&gt;&gt;&lt;&lt;goto &quot;NPC Debug&quot;&gt;&gt;&lt;&lt;/link&gt;&gt;&lt;/p&gt;&lt;&lt;return&gt;&gt;&lt;&lt;/if&gt;&gt;
 &lt;&lt;set _npc = setup.getNPC($inspectedNPC)&gt;&gt;
-&lt;&lt;if !_npc&gt;&gt;
-  &lt;p&gt;NPC not found: &lt;&lt;= $inspectedNPC &gt;&gt;. Return to &lt;&lt;link &quot;NPC Debug&quot;&gt;&gt;&lt;&lt;goto &quot;NPC Debug&quot;&gt;&gt;&lt;&lt;/link&gt;&gt;&lt;/p&gt;
-  &lt;&lt;return&gt;&gt;
-&lt;&lt;/if&gt;&gt;
+&lt;&lt;if !_npc&gt;&gt;&lt;p&gt;NPC not found: &lt;&lt;= $inspectedNPC &gt;&gt;. &lt;&lt;link &quot;Back to NPC Debug&quot;&gt;&gt;&lt;&lt;goto &quot;NPC Debug&quot;&gt;&gt;&lt;&lt;/link&gt;&gt;&lt;/p&gt;&lt;&lt;return&gt;&gt;&lt;&lt;/if&gt;&gt;
+
+&lt;!-- Working draft copy --&gt;
+&lt;&lt;if !$npcDraft or $npcDraft.id != _npc.id&gt;&gt;&lt;&lt;set $npcDraft = setup.deepClone(_npc)&gt;&gt;&lt;&lt;/if&gt;&gt;
 
 &lt;div class=&quot;npc-toolbar&quot;&gt;
-  &lt;&lt;link &quot;⟵ Back to list&quot;&gt;&gt;&lt;&lt;goto &quot;NPC Debug&quot;&gt;&gt;&lt;&lt;/link&gt;&gt;
-  &lt;strong style=&quot;margin-left:10px;&quot;&gt;Inspecting:&lt;/strong&gt; &lt;code&gt;&lt;&lt;=_npc.id&gt;&gt;&lt;/code&gt;
-  &lt;span&gt;— &lt;&lt;= _npc.identity.fullName &gt;&gt; (&lt;&lt;=_npc.identity.age&gt;&gt;)&lt;/span&gt;
+  &lt;&lt;link &quot;⟵ Back to NPC Debug&quot;&gt;&gt;&lt;&lt;goto &quot;NPC Debug&quot;&gt;&gt;&lt;&lt;/link&gt;&gt;
+  &lt;strong style=&quot;margin-left:10px;&quot;&gt;Editing:&lt;/strong&gt; &lt;code&gt;&lt;&lt;= $npcDraft.id &gt;&gt;&lt;/code&gt;
+  &lt;span&gt; — &lt;&lt;= $npcDraft.identity.fullName &gt;&gt; (&lt;&lt;= $npcDraft.identity.age &gt;&gt;)&lt;/span&gt;
 &lt;/div&gt;
 
-&lt;h4&gt;Overview&lt;/h4&gt;
-&lt;ul&gt;
-  &lt;li&gt;&lt;b&gt;Alive:&lt;/b&gt; &lt;&lt;= _npc.lifecycle.isAlive ? &#39;Yes&#39; : &#39;No&#39; &gt;&gt;&lt;/li&gt;
-  &lt;li&gt;&lt;b&gt;Occupation:&lt;/b&gt; &lt;&lt;= _npc.background.occupation &gt;&gt;&lt;/li&gt;
-  &lt;li&gt;&lt;b&gt;Entropy Exposure:&lt;/b&gt; &lt;&lt;= (_npc.entropy.exposure * 100).toFixed(0) &gt;&gt;%&lt;/li&gt;
-  &lt;li&gt;&lt;b&gt;HP:&lt;/b&gt; &lt;&lt;= _npc.conditions.vitals.hp &gt;&gt; / &lt;&lt;= _npc.derived.hpMax &gt;&gt;&lt;/li&gt;
-&lt;/ul&gt;
+&lt;&lt;set _form = setup.renderNPCEditor($npcDraft)&gt;&gt;
+&lt;&lt;= _form &gt;&gt;
 
-&lt;h4&gt;Full Structure&lt;/h4&gt;
-&lt;div id=&quot;npc-obj&quot;&gt;Loading…&lt;/div&gt;
-&lt;script&gt;
-(function() {
-  var npc = State.variables.actors[State.variables.inspectedNPC];
-  var html = setup.renderObject(npc);
-  $(&#39;#npc-obj&#39;).html(html);
-})();
-&lt;/script&gt;
-
-&lt;h4&gt;Copy JSON&lt;/h4&gt;
-&lt;textarea class=&quot;jsonbox&quot; readonly onclick=&quot;this.select()&quot;&gt;&lt;&lt;= setup.toJSONString(_npc) &gt;&gt;&lt;/textarea&gt;</tw-passagedata><tw-passagedata pid="3" name="StorySettings" tags="" position="350,100" size="100,100">{&quot;debug&quot;: true}</tw-passagedata><tw-passagedata pid="4" name="StoryCaption" tags="" position="475,100" size="100,100">&lt;i&gt;Cycles of Decay&lt;/i&gt; — A Twine/SugarCube interactive fiction project scaffold.</tw-passagedata><tw-passagedata pid="5" name="StoryAuthor" tags="" position="600,100" size="100,100">Your Name Here</tw-passagedata><tw-passagedata pid="6" name="StorySubtitle" tags="" position="725,100" size="100,100">A World In Slow Collapse</tw-passagedata><tw-passagedata pid="7" name="StoryBanner" tags="" position="850,100" size="100,100">&lt;img src=&quot;assets/images/banner.png&quot; alt=&quot;Cycles of Decay&quot; /&gt;</tw-passagedata><tw-passagedata pid="8" name="StoryInit" tags="" position="975,100" size="100,100">/* Runs once at story start (after StoryScript). */
-setup.game = {
-	title: &#39;Cycles of Decay&#39;,
-	version: &#39;0.0.1&#39;,
-	initialized: true
-};
-/* Initialize new procedural world if required */
+&lt;&lt;run setup.bindNPCEditor($npcDraft.id)&gt;&gt;</tw-passagedata><tw-passagedata pid="3" name="StorySettings" tags="" position="350,100" size="100,100">{&quot;debug&quot;: true}</tw-passagedata><tw-passagedata pid="4" name="StoryCaption" tags="" position="475,100" size="100,100">&lt;i&gt;Cycles of Decay&lt;/i&gt; — A Twine/SugarCube interactive fiction project scaffold.</tw-passagedata><tw-passagedata pid="5" name="StoryAuthor" tags="" position="600,100" size="100,100">Your Name Here</tw-passagedata><tw-passagedata pid="6" name="StorySubtitle" tags="" position="725,100" size="100,100">A World In Slow Collapse</tw-passagedata><tw-passagedata pid="7" name="StoryBanner" tags="" position="850,100" size="100,100">&lt;img src=&quot;assets/images/banner.png&quot; alt=&quot;Cycles of Decay&quot; /&gt;</tw-passagedata><tw-passagedata pid="8" name="StoryInit" tags="" position="975,100" size="100,100">/* Runs once at story start (after StoryScript). */
+&lt;&lt;run
+// Initialize small game metadata
+setup.game = { title: &#39;Cycles of Decay&#39;, version: &#39;0.0.1&#39;, initialized: true };
+// Initialize new procedural world if required
 if (State.variables._needsInit || !State.variables.legacy) {
-	setup.initNewGame();
+  setup.initNewGame();
 }
-
-/* Convenience reference */
+// Convenience reference
 State.variables.player = State.variables.pc; // legacy code compatibility
 
-/* ===== NPC debug helpers ===== */
-
-/* Return array of NPC IDs in display order */
+// ===== NPC debug helpers =====
+// Return array of NPC IDs in display order
 setup.npcIds = function() {
-  // Prefer your saved ordering if present
-  if (State.variables.populationOrder &amp;&amp; State.variables.populationOrder.length) {
-    return State.variables.populationOrder.slice();
-  }
-  // else from keys
-  return Object.keys(State.variables.actors || {}).sort();
+  const v = State.variables;
+  if (v.populationOrder &amp;&amp; v.populationOrder.length) { return v.populationOrder.slice(); }
+  return Object.keys(v.actors || {}).sort();
 };
-
-/* Get an NPC by id safely */
-setup.getNPC = function(id) {
-  return (State.variables.actors &amp;&amp; State.variables.actors[id]) || null;
-};
-
-/* Basic predicate filter for list search */
+// Get an NPC by id safely
+setup.getNPC = function(id) { return (State.variables.actors &amp;&amp; State.variables.actors[id]) || null; };
+// Basic predicate filter for list search
 setup.filterNpc = function(npc, q) {
   if (!q) return true;
-  q = q.toLowerCase();
+  q = String(q).toLowerCase();
+  const name = (npc.identity &amp;&amp; npc.identity.fullName) ? npc.identity.fullName : &#39;&#39;;
+  const occ  = (npc.background &amp;&amp; npc.background.occupation) ? npc.background.occupation : &#39;&#39;;
   return (
     (npc.id || &#39;&#39;).toLowerCase().includes(q) ||
-    (npc.identity?.fullName || &#39;&#39;).toLowerCase().includes(q) ||
-    (npc.background?.occupation || &#39;&#39;).toLowerCase().includes(q)
+    name.toLowerCase().includes(q) ||
+    occ.toLowerCase().includes(q)
   );
 };
 
-/* Example: deterministic 200 NPCs */
+// Example: deterministic 200 NPCs for debug view
 if (setup.NPC &amp;&amp; typeof setup.NPC.reseed === &#39;function&#39;) {
-  setup.NPC.reseed(&quot;TownSeed:Alpha&quot;);
+  setup.NPC.reseed(&#39;TownSeed:Alpha&#39;);
 }
 if (!State.variables.actors) State.variables.actors = {};
 if (!State.variables.populationOrder) State.variables.populationOrder = [];
-
-const _pop = setup.NPC.generatePopulation(200);
-for (const npc of _pop) {
-  State.variables.actors[npc.id] = npc;
-  State.variables.populationOrder.push(npc.id);
+if (setup.NPC &amp;&amp; typeof setup.NPC.generatePopulation === &#39;function&#39;) {
+  (function(){
+    const pop = setup.NPC.generatePopulation(200);
+    for (const npc of pop) {
+      State.variables.actors[npc.id] = npc;
+      State.variables.populationOrder.push(npc.id);
+    }
+  })();
 }
 
-/* Pretty recursive renderer =&gt; HTML (collapsible &lt;details&gt;) */
+// Pretty recursive renderer =&gt; HTML (collapsible &lt;details&gt;)
 setup.renderObject = function(obj, keyName) {
-  const esc = (s) =&gt; String(s).replace(/[&amp;&lt;&gt;&quot;]/g, c =&gt; ({&#39;&amp;&#39;:&#39;&amp;amp;&#39;,&#39;&lt;&#39;:&#39;&amp;lt;&#39;,&#39;&gt;&#39;:&#39;&amp;gt;&#39;,&#39;&quot;&#39;:&#39;&amp;quot;&#39;}[c]));
+  const esc = (s) =&gt; String(s).replace(/[&amp;&lt;&gt;\&quot;]/g, c =&gt; ({&#39;&amp;&#39;:&#39;&amp;amp;&#39;,&#39;&lt;&#39;:&#39;&amp;lt;&#39;,&#39;&gt;&#39;:&#39;&amp;gt;&#39;,&#39;\&quot;&#39;:&#39;&amp;quot;&#39;}[c]));
   function render(o, k) {
-    if (o === null || o === undefined) return `&lt;span class=&quot;v-null&quot;&gt;null&lt;/span&gt;`;
+    if (o === null || o === undefined) return &#39;&lt;span class=&quot;v-null&quot;&gt;null&lt;/span&gt;&#39;;
     const t = typeof o;
-    if (t === &#39;string&#39;) return `&lt;span class=&quot;v-str&quot;&gt;&quot;${esc(o)}&quot;&lt;/span&gt;`;
-    if (t === &#39;number&#39;) return `&lt;span class=&quot;v-num&quot;&gt;${o}&lt;/span&gt;`;
-    if (t === &#39;boolean&#39;) return `&lt;span class=&quot;v-bool&quot;&gt;${o}&lt;/span&gt;`;
+    if (t === &#39;string&#39;) return &#39;&lt;span class=&quot;v-str&quot;&gt;&quot;&#39; + esc(o) + &#39;&quot;&lt;/span&gt;&#39;;
+    if (t === &#39;number&#39;) return &#39;&lt;span class=&quot;v-num&quot;&gt;&#39; + o + &#39;&lt;/span&gt;&#39;;
+    if (t === &#39;boolean&#39;) return &#39;&lt;span class=&quot;v-bool&quot;&gt;&#39; + o + &#39;&lt;/span&gt;&#39;;
     if (Array.isArray(o)) {
-      if (o.length === 0) return `&lt;span class=&quot;v-arr&quot;&gt;[]&lt;/span&gt;`;
-      return `&lt;details open&gt;&lt;summary class=&quot;k&quot;&gt;${esc(k)} [${o.length}]&lt;/summary&gt;&lt;ul&gt;` +
-        o.map((v,i)=&gt;`&lt;li&gt;${render(v, `${i}`)}&lt;/li&gt;`).join(&#39;&#39;) +
-      `&lt;/ul&gt;&lt;/details&gt;`;
+      if (o.length === 0) return &#39;&lt;span class=&quot;v-arr&quot;&gt;[]&lt;/span&gt;&#39;;
+      return &#39;&lt;details open&gt;&lt;summary class=&quot;k&quot;&gt;&#39; + esc(k) + &#39; [&#39; + o.length + &#39;]&lt;/summary&gt;&lt;ul&gt;&#39; +
+        o.map(function(v,i){ return &#39;&lt;li&gt;&#39; + render(v, String(i)) + &#39;&lt;/li&gt;&#39;; }).join(&#39;&#39;) +
+      &#39;&lt;/ul&gt;&lt;/details&gt;&#39;;
     }
-    // object
     const keys = Object.keys(o);
-    if (keys.length === 0) return `&lt;span class=&quot;v-null&quot;&gt;{}&lt;/span&gt;`;
-    const inner = keys.map(sub =&gt;
-      `&lt;li&gt;&lt;span class=&quot;k&quot;&gt;${esc(sub)}:&lt;/span&gt; ${render(o[sub], sub)}&lt;/li&gt;`
-    ).join(&#39;&#39;);
-    // if top-level without keyName, just list
-    if (k === undefined) return `&lt;ul class=&quot;obj&quot;&gt;${inner}&lt;/ul&gt;`;
-    return `&lt;details open&gt;&lt;summary class=&quot;k&quot;&gt;${esc(k)}&lt;/summary&gt;&lt;ul&gt;${inner}&lt;/ul&gt;&lt;/details&gt;`;
+    if (keys.length === 0) return &#39;&lt;span class=&quot;v-null&quot;&gt;{}&lt;/span&gt;&#39;;
+    const inner = keys.map(function(sub){ return &#39;&lt;li&gt;&lt;span class=&quot;k&quot;&gt;&#39; + esc(sub) + &#39;:&lt;/span&gt; &#39; + render(o[sub], sub) + &#39;&lt;/li&gt;&#39;; }).join(&#39;&#39;);
+    if (k === undefined) return &#39;&lt;ul class=&quot;obj&quot;&gt;&#39; + inner + &#39;&lt;/ul&gt;&#39;;
+    return &#39;&lt;details open&gt;&lt;summary class=&quot;k&quot;&gt;&#39; + esc(k) + &#39;&lt;/summary&gt;&lt;ul&gt;&#39; + inner + &#39;&lt;/ul&gt;&lt;/details&gt;&#39;;
   }
-  return `&lt;div class=&quot;obj&quot;&gt;${render(obj, keyName)}&lt;/div&gt;`;
+  return &#39;&lt;div class=&quot;obj&quot;&gt;&#39; + render(obj, keyName) + &#39;&lt;/div&gt;&#39;;
 };
-
-/* Convenience for copying JSON to a textarea */
-setup.toJSONString = function(o) {
-  try { return JSON.stringify(o, null, 2); } catch(e){ return &#39;/* JSON stringify error */&#39;; }
-};</tw-passagedata><tw-passagedata pid="9" name="StoryMenu" tags="" position="1100,100" size="100,100">/* Customize the menu (appears via the sidebar). */
-&lt;&lt;link &#39;Restart&#39;&gt;&gt;&lt;&lt;restart&gt;&gt;&lt;&lt;/link&gt;&gt; | &lt;&lt;link &#39;Save&#39;&gt;&gt;&lt;&lt;save&gt;&gt;&lt;&lt;/link&gt;&gt; | &lt;&lt;link &#39;Load&#39;&gt;&gt;&lt;&lt;load&gt;&gt;&lt;&lt;/link&gt;&gt;</tw-passagedata><tw-passagedata pid="10" name="Start" tags="" position="1225,100" size="100,100">&lt;&lt;if !_once.startBanner&gt;&gt;
-&lt;div class=&quot;seed-note&quot;&gt;World Seed: &lt;span title=&quot;Use the ?seed= query parameter to reproduce a world&quot;&gt;$legacy.seed&lt;/span&gt;&lt;/div&gt;
+// Convenience for copying JSON to a textarea
+setup.toJSONString = function(o) { try { return JSON.stringify(o, null, 2); } catch(e){ return &#39;/* JSON stringify error */&#39;; } };
+&gt;&gt;</tw-passagedata><tw-passagedata pid="9" name="StoryMenu" tags="" position="1100,100" size="100,100">/* Customize the menu (appears via the sidebar). */
+&lt;&lt;link &#39;Restart&#39;&gt;&gt;&lt;&lt;restart&gt;&gt;&lt;&lt;/link&gt;&gt; | &lt;&lt;link &#39;Save&#39;&gt;&gt;&lt;&lt;save&gt;&gt;&lt;&lt;/link&gt;&gt; | &lt;&lt;link &#39;Load&#39;&gt;&gt;&lt;&lt;load&gt;&gt;&lt;&lt;/link&gt;&gt;</tw-passagedata><tw-passagedata pid="10" name="Start" tags="" position="1225,100" size="100,100">&lt;&lt;if !$startBannerShown&gt;&gt;
+  &lt;&lt;set $startBannerShown = true&gt;&gt;
+  &lt;div class=&quot;seed-note&quot;&gt;World Seed: &lt;span title=&quot;Use the ?seed= query parameter to reproduce a world&quot;&gt;$legacy.seed&lt;/span&gt;&lt;/div&gt;
 &lt;&lt;/if&gt;&gt;
 You stand amidst ruins, the wind carrying whispers of forgotten cycles.
 
-Current Life: &lt;b&gt;$pc.name&lt;/b&gt; (&lt;i&gt;$pc.archetype&lt;/i&gt;) — Traits: $pc.traits.join(&#39;, &#39;)
-&lt;br/&gt;Health: $pc.health / $pc.stats.maxHealth | Awareness: $pc.stats.awareness | Will: $pc.stats.will
+Current Life: &lt;b&gt;&lt;&lt;=$pc.identity?.fullName||&#39;Unknown&#39;&gt;&gt;&lt;/b&gt; (&lt;i&gt;&lt;&lt;=$pc.background?.occupation||$pc.personality?.archetype||&#39;n/a&#39;&gt;&gt;&lt;/i&gt;) — Traits: &lt;&lt;= ($pc.personality?.traits||[]).join(&#39;, &#39;) &gt;&gt;
+&lt;br/&gt;Health: &lt;&lt;= $pc.conditions?.vitals?.hp || 0 &gt;&gt; / &lt;&lt;= $pc.derived?.hpMax || 0 &gt;&gt; | Awareness: &lt;&lt;= $pc.derived?.perception || 0 &gt;&gt; | Will: &lt;&lt;= $pc.attributes?.FOR || 0 &gt;&gt;
 &lt;br/&gt;Population: $legacy.populationRoster.length remaining.
 
 [[Continue|Intro]]
